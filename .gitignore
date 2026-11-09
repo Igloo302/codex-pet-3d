@@ -1,7 +1,23 @@
-node_modules
-dist
-dist-*
-temp-*
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+dist-*/
+temp-*/
+*.tsbuildinfo
+coverage/
+.vitest/
+
+# OS metadata
 .DS_Store
+Thumbs.db
 *.log
-.superpowers
+
+# Editor & IDE
+.vscode/
+.idea/
+
+# Internal scaffolding & task artifacts
+.superpowers/
+docs/superpowers/
