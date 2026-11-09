@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import type { Pet3DRendererOptions } from "./types";
+import type { Pet3DRendererOptions } from "./types.js";
 
 /**
  * Pet3DRenderer - sets up Three.js Scene, PerspectiveCamera, WebGLRenderer, and soft 3-point lighting.

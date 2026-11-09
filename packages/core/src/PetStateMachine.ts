@@ -1,4 +1,4 @@
-import type { PetState, PetStateMachineOptions } from "./types";
+import type { PetState, PetStateMachineOptions } from "./types.js";
 
 /**
  * States that loop continuously

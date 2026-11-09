@@ -34,7 +34,7 @@ program
           JSON.stringify(
             {
               valid: false,
-              exitCode: 1,
+              exitCode: 2,
               errors: [
                 {
                   path: targetDir,
@@ -51,7 +51,7 @@ program
       } else {
         console.error(`Error: ${errorMessage}`);
       }
-      process.exit(1);
+      process.exit(2);
     }
   });
 

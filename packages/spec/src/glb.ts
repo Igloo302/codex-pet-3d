@@ -1,6 +1,6 @@
 import { WebIO } from "@gltf-transform/core";
 import type { Accessor, Primitive } from "@gltf-transform/core";
-import { GlbFormatError } from "./errors";
+import { GlbFormatError } from "./errors.js";
 
 const GLB_MAGIC = 0x46546c67; // "glTF" as a little-endian uint32
 const GLB_VERSION = 2;

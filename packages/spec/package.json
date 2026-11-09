@@ -1,6 +1,7 @@
 {
   "name": "@codex-pet-3d/spec",
   "version": "0.1.0",
+  "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
@@ -13,6 +14,7 @@
     "ajv-formats": "^2.1.1"
   },
   "devDependencies": {
+    "@types/node": "^20.0.0",
     "typescript": "^5.4.0",
     "vitest": "^1.0.0"
   }

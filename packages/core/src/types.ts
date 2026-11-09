@@ -63,6 +63,8 @@ export interface Pet3DControllerOptions extends Pet3DRendererOptions {
   };
   onStateChange?: (from: PetState, to: PetState) => void;
   onAnimationFinished?: (state: PetState) => void;
+  autoStartLoop?: boolean;
+  maxFps?: number;
 }
 
 /**

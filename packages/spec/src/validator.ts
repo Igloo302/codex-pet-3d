@@ -1,7 +1,10 @@
 import Ajv from "ajv";
 import addFormats from "ajv-formats";
-import schema from "../schemas/pet-3d.schema.json";
-import type { Pet3DManifest, ValidationError } from "./types";
+import { createRequire } from "node:module";
+import type { Pet3DManifest, ValidationError } from "./types.js";
+
+const require = createRequire(import.meta.url);
+const schema = require("../schemas/pet-3d.schema.json");
 
 const ajv = new Ajv({ allErrors: true, strict: true });
 addFormats(ajv);

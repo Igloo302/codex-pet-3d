@@ -1,5 +1,5 @@
-export * from "./types";
-export { validatePet3DManifest } from "./validator";
-export { GlbFormatError } from "./errors";
-export { parseGlbHeader, inspectGlb } from "./glb";
-export type { GlbInspectionResult } from "./glb";
+export * from "./types.js";
+export { validatePet3DManifest } from "./validator.js";
+export { GlbFormatError } from "./errors.js";
+export { parseGlbHeader, inspectGlb } from "./glb.js";
+export type { GlbInspectionResult } from "./glb.js";

@@ -1,35 +1,35 @@
 import { Pet3DController } from "@codex-pet-3d/core";
 import type { StandardAnimationState } from "@codex-pet-3d/spec";
 
-// Manifest configuration matching the core package expectations
+// Manifest configuration matching the cyber-cat sample asset
 const MANIFEST = {
   scale: 1.0,
   camera: {
     fov: 45,
-    position: [0, 1.2, 2.5] as [number, number, number],
-    target: [0, 0.4, 0] as [number, number, number],
+    position: [0, 0, 3] as [number, number, number],
+    target: [0, 0, 0] as [number, number, number],
   },
   lookAt: {
     enabled: true,
-    headBone: "head",
+    headBone: "Head",
     maxYawDeg: 45,
     maxPitchDeg: 30,
   },
   animations: {
-    idle: { clip: "idle", loop: true },
-    "running-right": { clip: "run", loop: true },
-    "running-left": { clip: "run", loop: true },
-    waving: { clip: "wave", loop: false },
-    jumping: { clip: "jump", loop: false },
-    failed: { clip: "idle", loop: false },
-    waiting: { clip: "idle", loop: true },
-    running: { clip: "run", loop: true },
-    review: { clip: "idle", loop: false },
+    idle: { clip: "Idle", loop: true },
+    "running-right": { clip: "Run_Right", loop: true },
+    "running-left": { clip: "Run_Left", loop: true },
+    waving: { clip: "Wave", loop: false },
+    jumping: { clip: "Jump", loop: false },
+    failed: { clip: "Failed", loop: false },
+    waiting: { clip: "Waiting", loop: true },
+    running: { clip: "Work", loop: true },
+    review: { clip: "Review", loop: false },
   } as Record<StandardAnimationState, { clip: string; loop: boolean }>,
 };
 
-// Model URL - using a placeholder that will work with the core package
-const MODEL_URL = "https://raw.githubusercontent.com/khronosgltf/Sample-Models/main/2.0/Box/glTF-Binary/Box.glb";
+// Model URL - local standard sample asset
+const MODEL_URL = "../../../assets/cyber-cat/model.glb";
 
 // Get canvas element
 const canvas = document.getElementById("pet-canvas") as HTMLCanvasElement;
@@ -37,7 +37,7 @@ if (!canvas) {
   throw new Error("Canvas element not found");
 }
 
-// Initialize controller
+// Initialize controller with autoStartLoop: false to avoid dual render loops
 const controller = new Pet3DController({
   canvas,
   width: 220,
@@ -46,6 +46,7 @@ const controller = new Pet3DController({
   manifest: MANIFEST,
   backgroundColor: 0x000000,
   backgroundAlpha: 0,
+  autoStartLoop: false,
 });
 
 // IPC cursor tracking

@@ -1,13 +1,13 @@
 import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { Pet3DRenderer } from "./Pet3DRenderer";
-import { PetStateMachine, isOneShotState } from "./PetStateMachine";
-import { LookAtTracker, calculateAngles } from "./LookAtTracker";
+import { Pet3DRenderer } from "./Pet3DRenderer.js";
+import { PetStateMachine, isOneShotState } from "./PetStateMachine.js";
+import { LookAtTracker, calculateAngles } from "./LookAtTracker.js";
 import type {
   PetState,
   Pet3DControllerOptions,
   PetStateMachineOptions,
-} from "./types";
+} from "./types.js";
 
 /**
  * Pet3DController - orchestrates Three.js scene, GLTFLoader, AnimationMixer cross-fading,
@@ -30,6 +30,7 @@ export class Pet3DController {
   private readonly onStateChange?: (from: PetState, to: PetState) => void;
   private readonly onAnimationFinished?: (state: PetState) => void;
   private isLoaded = false;
+  private readonly autoStartLoop: boolean;
   private animationFrameId: number | null = null;
   private lastTime = 0;
 
@@ -39,8 +40,11 @@ export class Pet3DController {
       manifest,
       onStateChange,
       onAnimationFinished,
+      autoStartLoop = true,
       ...rendererOptions
     } = options;
+
+    this.autoStartLoop = autoStartLoop;
 
     // Initialize renderer
     this.renderer = new Pet3DRenderer(rendererOptions);
@@ -93,8 +97,10 @@ export class Pet3DController {
     // Load model
     this.loadModel(modelUrl, manifest.animations).then(() => {
       this.isLoaded = true;
-      // Start render loop
-      this.startAnimationLoop();
+      // Start render loop if enabled
+      if (this.autoStartLoop) {
+        this.startAnimationLoop();
+      }
     });
   }
 
@@ -191,7 +197,8 @@ export class Pet3DController {
   /**
    * Start the animation loop
    */
-  private startAnimationLoop(): void {
+  startAnimationLoop(): void {
+    if (this.animationFrameId !== null) return;
     this.lastTime = performance.now();
     const animate = (time: number) => {
       this.animationFrameId = requestAnimationFrame(animate);
@@ -202,6 +209,16 @@ export class Pet3DController {
       this.renderer.render();
     };
     this.animationFrameId = requestAnimationFrame(animate);
+  }
+
+  /**
+   * Stop the animation loop
+   */
+  stopAnimationLoop(): void {
+    if (this.animationFrameId !== null) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = null;
+    }
   }
 
   /**
