@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "resolveJsonModule": true,
+    "target": "ES2022",
+    "lib": ["ES2022", "dom"],
+    "types": ["node", "electron"]
+  },
+  "include": ["src"]
+}
