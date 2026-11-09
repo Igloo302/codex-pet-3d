@@ -1,9 +1,25 @@
-import { app, BrowserWindow, screen, ipcMain } from "electron";
+import { app, BrowserWindow, screen, ipcMain, Menu } from "electron";
 import * as path from "path";
 import { getWindowOptions } from "./window-config";
+import { createContextMenuTemplate } from "./context-menu";
 
 let mainWindow: BrowserWindow | null = null;
 let cursorPollingInterval: NodeJS.Timeout | null = null;
+let isLookAtEnabled = true;
+
+/**
+ * Reset window position to the bottom-right corner of the work area
+ */
+function resetWindowPosition(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  const petWidth = 220;
+  const petHeight = 240;
+  const x = Math.max(0, screenWidth - petWidth - 30);
+  const y = Math.max(0, screenHeight - petHeight - 30);
+  mainWindow.setPosition(x, y);
+}
 
 /**
  * Create the main application window
@@ -123,6 +139,27 @@ ipcMain.on("drag-window", (_event) => {
     mainWindow.setIgnoreMouseEvents(false);
     mainWindow.webContents.send("drag-window-start");
   }
+});
+
+/**
+ * IPC handler for showing the native context menu
+ */
+ipcMain.on("show-context-menu", () => {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+
+  const template = createContextMenuTemplate({
+    isLookAtEnabled,
+    onPlayAnimation: (state) => mainWindow?.webContents.send("play-animation", state),
+    onToggleLookAt: (enabled) => {
+      isLookAtEnabled = enabled;
+      mainWindow?.webContents.send("toggle-look-at", isLookAtEnabled);
+    },
+    onResetPosition: () => resetWindowPosition(),
+    onQuit: () => app.quit(),
+  });
+
+  const menu = Menu.buildFromTemplate(template);
+  menu.popup({ window: mainWindow });
 });
 
 // App event handlers

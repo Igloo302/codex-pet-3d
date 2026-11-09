@@ -52,13 +52,27 @@ const controller = new Pet3DController({
 // IPC cursor tracking
 let currentCursorX = 0;
 let currentCursorY = 0;
+let isLookAtEnabled = true;
 
-// Listen for cursor updates from main process (30Hz)
+// Listen for updates from main process
 if (window.desktopPet) {
   window.desktopPet.onCursorUpdate((payload: { x: number; y: number }) => {
-    currentCursorX = payload.x;
-    currentCursorY = payload.y;
-    controller.setLookAtTarget(currentCursorX, currentCursorY);
+    if (isLookAtEnabled) {
+      currentCursorX = payload.x;
+      currentCursorY = payload.y;
+      controller.setLookAtTarget(currentCursorX, currentCursorY);
+    }
+  });
+
+  window.desktopPet.onPlayAnimation((state: StandardAnimationState) => {
+    controller.playState(state);
+  });
+
+  window.desktopPet.onToggleLookAt((enabled: boolean) => {
+    isLookAtEnabled = enabled;
+    if (!enabled) {
+      controller.setLookAtTarget(0, 0);
+    }
   });
 }
 
@@ -185,13 +199,19 @@ window.addEventListener("mouseleave", () => {
   }
 });
 
-// Interactive reactions when clicking on the pet
-window.addEventListener("click", () => {
-  if (!isDragging) {
+// Interactive reactions when clicking on the pet (left click)
+window.addEventListener("click", (e) => {
+  if (!isDragging && e.button === 0) {
     const states: StandardAnimationState[] = ["waving", "jumping", "review", "running"];
     const nextState = states[Math.floor(Math.random() * states.length)];
     controller.playState(nextState);
   }
+});
+
+// Right click context menu
+window.addEventListener("contextmenu", (e) => {
+  e.preventDefault();
+  window.desktopPet?.showContextMenu();
 });
 
 export { controller };

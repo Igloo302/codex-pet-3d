@@ -1,4 +1,5 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
+import type { StandardAnimationState } from "@codex-pet-3d/spec";
 
 /**
  * Cursor update payload received from main process
@@ -39,6 +40,21 @@ interface DesktopPetAPI {
    * Move window by relative offset
    */
   moveWindow: (offset: { x: number; y: number }) => void;
+
+  /**
+   * Request native context menu
+   */
+  showContextMenu: () => void;
+
+  /**
+   * Listen for action state change request from context menu
+   */
+  onPlayAnimation: (callback: (state: StandardAnimationState) => void) => () => void;
+
+  /**
+   * Listen for lookAt toggle from context menu
+   */
+  onToggleLookAt: (callback: (enabled: boolean) => void) => () => void;
 }
 
 const api: DesktopPetAPI = {
@@ -60,6 +76,26 @@ const api: DesktopPetAPI = {
 
   moveWindow: (offset: { x: number; y: number }) => {
     ipcRenderer.send("move-window", offset);
+  },
+
+  showContextMenu: () => {
+    ipcRenderer.send("show-context-menu");
+  },
+
+  onPlayAnimation: (callback: (state: StandardAnimationState) => void) => {
+    const listener = (_event: IpcRendererEvent, state: StandardAnimationState) => {
+      callback(state);
+    };
+    ipcRenderer.on("play-animation", listener);
+    return () => ipcRenderer.removeListener("play-animation", listener);
+  },
+
+  onToggleLookAt: (callback: (enabled: boolean) => void) => {
+    const listener = (_event: IpcRendererEvent, enabled: boolean) => {
+      callback(enabled);
+    };
+    ipcRenderer.on("toggle-look-at", listener);
+    return () => ipcRenderer.removeListener("toggle-look-at", listener);
   },
 };
 
