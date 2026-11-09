@@ -1,3 +1,26 @@
+export type StandardAnimationState =
+  | "idle"
+  | "running-right"
+  | "running-left"
+  | "waving"
+  | "jumping"
+  | "failed"
+  | "waiting"
+  | "running"
+  | "review";
+
+export const STANDARD_ANIMATION_STATES: readonly StandardAnimationState[] = [
+  "idle",
+  "running-right",
+  "running-left",
+  "waving",
+  "jumping",
+  "failed",
+  "waiting",
+  "running",
+  "review"
+];
+
 export interface ValidationError {
   path: string;
   code: string;
@@ -24,10 +47,5 @@ export interface Pet3DManifest {
     max_yaw_deg: number;
     max_pitch_deg: number;
   };
-  animations: {
-    [key: string]: {
-      clip: string;
-      loop: boolean;
-    };
-  };
+  animations: Record<StandardAnimationState, { clip: string; loop: boolean }>;
 }

@@ -4,6 +4,17 @@
   "type": "object",
   "required": ["$schema", "spec_version", "id", "display_name", "author", "description", "model", "scale", "camera", "look_at", "animations"],
   "additionalProperties": false,
+  "definitions": {
+    "animationClip": {
+      "type": "object",
+      "required": ["clip", "loop"],
+      "additionalProperties": false,
+      "properties": {
+        "clip": { "type": "string" },
+        "loop": { "type": "boolean" }
+      }
+    }
+  },
   "properties": {
     "$schema": { "type": "string" },
     "spec_version": { "type": "string" },
@@ -36,14 +47,18 @@
     },
     "animations": {
       "type": "object",
-      "additionalProperties": {
-        "type": "object",
-        "required": ["clip", "loop"],
-        "additionalProperties": false,
-        "properties": {
-          "clip": { "type": "string" },
-          "loop": { "type": "boolean" }
-        }
+      "required": ["idle", "running-right", "running-left", "waving", "jumping", "failed", "waiting", "running", "review"],
+      "additionalProperties": { "$ref": "#/definitions/animationClip" },
+      "properties": {
+        "idle": { "$ref": "#/definitions/animationClip" },
+        "running-right": { "$ref": "#/definitions/animationClip" },
+        "running-left": { "$ref": "#/definitions/animationClip" },
+        "waving": { "$ref": "#/definitions/animationClip" },
+        "jumping": { "$ref": "#/definitions/animationClip" },
+        "failed": { "$ref": "#/definitions/animationClip" },
+        "waiting": { "$ref": "#/definitions/animationClip" },
+        "running": { "$ref": "#/definitions/animationClip" },
+        "review": { "$ref": "#/definitions/animationClip" }
       }
     }
   }

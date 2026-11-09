@@ -1,8 +1,8 @@
 {
   "name": "@codex-pet-3d/spec",
   "version": "0.1.0",
-  "main": "src/index.ts",
-  "types": "src/index.ts",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
   "scripts": {
     "test": "vitest run",
     "build": "tsc"
@@ -12,6 +12,7 @@
     "ajv-formats": "^2.1.1"
   },
   "devDependencies": {
+    "typescript": "^5.4.0",
     "vitest": "^1.0.0"
   }
 }

@@ -60,4 +60,24 @@ describe("validatePet3DManifest", () => {
     expect(result.valid).toBe(false);
     expect(result.errors.some(e => e.code === "additionalProperties")).toBe(true);
   });
+
+  it("fails when a required root property is missing", () => {
+    const invalid = { ...validManifest };
+    delete (invalid as Record<string, unknown>).id;
+    const result = validatePet3DManifest(invalid);
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some(e => e.path === "/id" && e.code === "required")
+    ).toBe(true);
+  });
+
+  it("fails when a required standard animation is missing", () => {
+    const invalid = { ...validManifest, animations: { ...validManifest.animations } };
+    delete (invalid.animations as Record<string, unknown>).idle;
+    const result = validatePet3DManifest(invalid);
+    expect(result.valid).toBe(false);
+    expect(
+      result.errors.some(e => e.path === "/animations/idle" && e.code === "required")
+    ).toBe(true);
+  });
 });

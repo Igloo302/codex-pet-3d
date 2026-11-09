@@ -5,6 +5,9 @@
     "test": "pnpm -r test",
     "build": "pnpm -r build"
   },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "esbuild",
