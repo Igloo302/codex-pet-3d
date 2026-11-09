@@ -1,0 +1,22 @@
+{
+  "name": "@codex-pet-3d/cli",
+  "version": "0.1.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codex-pet-3d/spec": "workspace:*",
+    "puppeteer": "^22.12.0",
+    "three": "^0.160.0",
+    "esbuild": "^0.21.5"
+  },
+  "devDependencies": {
+    "@types/three": "^0.160.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^1.0.0"
+  }
+}
