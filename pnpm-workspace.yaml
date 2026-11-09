@@ -2,5 +2,7 @@ packages:
   - "packages/*"
 
 allowBuilds:
+  electron: true
   esbuild: true
   puppeteer: true
+  sharp: true
