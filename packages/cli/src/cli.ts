@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { Command } from "commander";
 import { runValidate, formatValidationResult, type ValidationResult } from "./commands/validate.js";
+import { runBake2D } from "./commands/bake-2d.js";
 
 const program = new Command();
 
@@ -52,6 +53,32 @@ program
         console.error(`Error: ${errorMessage}`);
       }
       process.exit(2);
+    }
+  });
+
+program
+  .command("bake-2d <targetDir>")
+  .description("Bake a pet-3d asset into a Codex Pet v2 2D spritesheet")
+  .requiredOption(
+    "--out <outDir>",
+    "Output directory for spritesheet.webp and pet.json"
+  )
+  .action(async (targetDir: string, options: { out: string }) => {
+    try {
+      const result = await runBake2D(targetDir, { out: options.out });
+      if (result.success) {
+        console.log(`Baked 2D spritesheet to ${options.out}`);
+      } else {
+        console.error(`Bake failed (exit ${result.exitCode}):`);
+        for (const error of result.errors ?? []) {
+          console.error(`  [${error.code}] ${error.path}: ${error.message}`);
+        }
+      }
+      process.exit(result.exitCode);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error: ${errorMessage}`);
+      process.exit(1);
     }
   });
 
