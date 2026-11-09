@@ -34,6 +34,11 @@ interface DesktopPetAPI {
    * Request window drag to start moving the frameless window
    */
   dragWindow: () => void;
+
+  /**
+   * Move window by relative offset
+   */
+  moveWindow: (offset: { x: number; y: number }) => void;
 }
 
 const api: DesktopPetAPI = {
@@ -51,6 +56,10 @@ const api: DesktopPetAPI = {
 
   dragWindow: () => {
     ipcRenderer.send("drag-window");
+  },
+
+  moveWindow: (offset: { x: number; y: number }) => {
+    ipcRenderer.send("move-window", offset);
   },
 };
 

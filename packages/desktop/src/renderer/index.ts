@@ -28,8 +28,8 @@ const MANIFEST = {
   } as Record<StandardAnimationState, { clip: string; loop: boolean }>,
 };
 
-// Model URL - local standard sample asset
-const MODEL_URL = "../../../assets/cyber-cat/model.glb";
+// Model URL - relative to renderer/index.html with local bundled asset
+const MODEL_URL = "./assets/cyber-cat/model.glb";
 
 // Get canvas element
 const canvas = document.getElementById("pet-canvas") as HTMLCanvasElement;
@@ -129,6 +129,69 @@ window.addEventListener("beforeunload", () => {
     cancelAnimationFrame(animationFrameId);
   }
   controller.dispose();
+});
+
+// Click-through hit-testing and dragging state
+let isDragging = false;
+let dragStartX = 0;
+let dragStartY = 0;
+
+window.addEventListener("mousedown", (e) => {
+  if (e.button === 0) {
+    isDragging = true;
+    dragStartX = e.screenX;
+    dragStartY = e.screenY;
+  }
+});
+
+window.addEventListener("mousemove", (e) => {
+  if (isDragging) {
+    const dx = e.screenX - dragStartX;
+    const dy = e.screenY - dragStartY;
+    dragStartX = e.screenX;
+    dragStartY = e.screenY;
+    window.desktopPet?.moveWindow({ x: dx, y: dy });
+    return;
+  }
+
+  // Pixel alpha hit-testing: ignore mouse events on transparent background so windows beneath can be clicked
+  try {
+    const gl = controller.getRenderer().getRenderer().getContext() as WebGLRenderingContext | WebGL2RenderingContext;
+    if (gl) {
+      const rect = canvas.getBoundingClientRect();
+      const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
+      const y = Math.floor((rect.bottom - e.clientY) * (canvas.height / rect.height));
+      if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
+        const pixel = new Uint8Array(4);
+        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+        const isOpaque = pixel[3] > 10;
+        window.desktopPet?.setIgnoreMouseEvents(!isOpaque);
+      } else {
+        window.desktopPet?.setIgnoreMouseEvents(true);
+      }
+    }
+  } catch {
+    // ignore
+  }
+});
+
+window.addEventListener("mouseup", () => {
+  isDragging = false;
+});
+
+window.addEventListener("mouseleave", () => {
+  if (!isDragging) {
+    window.desktopPet?.setIgnoreMouseEvents(true);
+  }
+});
+
+// Interactive reactions when clicking on the pet
+window.addEventListener("click", () => {
+  if (!isDragging) {
+    const states: StandardAnimationState[] = ["waving", "jumping", "review", "running"];
+    const nextState = states[Math.floor(Math.random() * states.length)];
+    controller.playState(nextState);
+  }
 });
 
 export { controller };

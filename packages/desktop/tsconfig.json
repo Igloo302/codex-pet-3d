@@ -5,6 +5,7 @@
     "rootDir": "src",
     "resolveJsonModule": true,
     "target": "ES2022",
+    "module": "CommonJS",
     "lib": ["ES2022", "dom"],
     "types": ["node", "electron"]
   },

@@ -4,7 +4,9 @@
   "private": true,
   "main": "dist/main.js",
   "scripts": {
-    "build": "tsc && esbuild src/renderer/index.ts --bundle --outfile=dist/renderer/index.js --format=esm --platform=browser && cp src/renderer/index.html dist/renderer/index.html",
+    "build": "tsc && esbuild src/renderer/index.ts --bundle --outfile=dist/renderer/index.js --format=esm --platform=browser && cp src/renderer/index.html dist/renderer/index.html && mkdir -p dist/renderer/assets && cp -r ../../assets/* dist/renderer/assets/",
+    "dev": "pnpm run build && electron .",
+    "start": "electron .",
     "test": "vitest run"
   },
   "dependencies": {

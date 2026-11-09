@@ -9,9 +9,19 @@ let cursorPollingInterval: NodeJS.Timeout | null = null;
  * Create the main application window
  */
 function createWindow(): void {
-  const options = getWindowOptions({ width: 220, height: 240 });
+  const primaryDisplay = screen.getPrimaryDisplay();
+  const { width: screenWidth, height: screenHeight } = primaryDisplay.workAreaSize;
+  const petWidth = 220;
+  const petHeight = 240;
+
+  const options = getWindowOptions({ width: petWidth, height: petHeight });
+  options.x = Math.max(0, screenWidth - petWidth - 30);
+  options.y = Math.max(0, screenHeight - petHeight - 30);
 
   mainWindow = new BrowserWindow(options);
+
+  // Set click-through on transparent areas by default
+  mainWindow.setIgnoreMouseEvents(true, { forward: true });
 
   // Load the renderer HTML
   const rendererPath = path.join(__dirname, "renderer", "index.html");
@@ -51,10 +61,14 @@ function startCursorPolling(): void {
     const offsetX = cursorPoint.x - windowCenterX;
     const offsetY = cursorPoint.y - windowCenterY;
 
-    // Normalize to [-1, 1] range based on window dimensions
-    // Using half width/height as the normalization factor
-    const normalizedX = offsetX / (bounds.width / 2);
-    const normalizedY = offsetY / (bounds.height / 2);
+    // Normalize relative to the active display bounds so the pet tracks across the entire screen
+    const display = screen.getDisplayNearestPoint(cursorPoint);
+    const displayBounds = display.bounds;
+    const rangeX = Math.max(displayBounds.width / 2, 400);
+    const rangeY = Math.max(displayBounds.height / 2, 300);
+
+    const normalizedX = offsetX / rangeX;
+    const normalizedY = offsetY / rangeY;
 
     // Clamp to [-1, 1]
     const clampedX = Math.max(-1, Math.min(1, normalizedX));
@@ -83,7 +97,21 @@ function stopCursorPolling(): void {
  */
 ipcMain.on("set-ignore-mouse-events", (_event, ignore: boolean) => {
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setIgnoreMouseEvents(ignore, { forward: true });
+    if (ignore) {
+      mainWindow.setIgnoreMouseEvents(true, { forward: true });
+    } else {
+      mainWindow.setIgnoreMouseEvents(false);
+    }
+  }
+});
+
+/**
+ * IPC handler for moving the frameless window
+ */
+ipcMain.on("move-window", (_event, offset: { x: number; y: number }) => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const [x, y] = mainWindow.getPosition();
+    mainWindow.setPosition(Math.round(x + offset.x), Math.round(y + offset.y));
   }
 });
 

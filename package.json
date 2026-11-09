@@ -6,7 +6,9 @@
     "test": "pnpm -r test && vitest run tests/e2e.test.ts",
     "test:e2e": "vitest run tests/e2e.test.ts",
     "validate": "node packages/cli/dist/cli.js validate",
-    "bake-2d": "node packages/cli/dist/cli.js bake-2d"
+    "bake-2d": "node packages/cli/dist/cli.js bake-2d",
+    "desktop": "pnpm --filter @codex-pet-3d/desktop dev",
+    "web": "pnpm --filter @codex-pet-3d/web dev"
   },
   "devDependencies": {
     "sharp": "^0.35.5",
