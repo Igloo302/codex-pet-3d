@@ -1,0 +1,50 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pet3DManifest",
+  "type": "object",
+  "required": ["$schema", "spec_version", "id", "display_name", "author", "description", "model", "scale", "camera", "look_at", "animations"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "spec_version": { "type": "string" },
+    "id": { "type": "string" },
+    "display_name": { "type": "string" },
+    "author": { "type": "string" },
+    "description": { "type": "string" },
+    "model": { "type": "string" },
+    "scale": { "type": "number" },
+    "camera": {
+      "type": "object",
+      "required": ["fov", "position", "target"],
+      "additionalProperties": false,
+      "properties": {
+        "fov": { "type": "number" },
+        "position": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 },
+        "target": { "type": "array", "items": { "type": "number" }, "minItems": 3, "maxItems": 3 }
+      }
+    },
+    "look_at": {
+      "type": "object",
+      "required": ["enabled", "head_bone", "max_yaw_deg", "max_pitch_deg"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "head_bone": { "type": "string" },
+        "max_yaw_deg": { "type": "number", "minimum": 0, "maximum": 90 },
+        "max_pitch_deg": { "type": "number", "minimum": 0, "maximum": 60 }
+      }
+    },
+    "animations": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": ["clip", "loop"],
+        "additionalProperties": false,
+        "properties": {
+          "clip": { "type": "string" },
+          "loop": { "type": "boolean" }
+        }
+      }
+    }
+  }
+}
