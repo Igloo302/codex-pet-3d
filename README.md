@@ -17,33 +17,33 @@ Author a rigged, animated 3D pet once → bake to a standards-compliant 2D sprit
 ```mermaid
 graph TB
     subgraph Authoring["Authoring & Validation"]
-        A[pet-3d.json + model.glb] --> B[@codex-pet-3d/spec<br/>Validator]
-        B -->|valid| C[@codex-pet-3d/cli<br/>bake-2d]
+        A["pet-3d.json + model.glb"] --> B["@codex-pet-3d/spec<br/>Validator"]
+        B -->|valid| C["@codex-pet-3d/cli<br/>bake-2d"]
     end
 
     subgraph Baking["2D Baking Pipeline"]
-        C --> D[Puppeteer + Three.js<br/>Headless Renderer]
-        D --> E[Union AABB Framing]
-        E --> F[2× Supersample + Lanczos3]
-        F --> G[spritesheet.webp<br/>1536×2288 lossless]
-        F --> H[pet.json<br/>Codex Pet v2]
+        C --> D["Puppeteer + Three.js<br/>Headless Renderer"]
+        D --> E["Union AABB Framing"]
+        E --> F["2× Supersample + Lanczos3"]
+        F --> G["spritesheet.webp<br/>1536×2288 lossless"]
+        F --> H["pet.json<br/>Codex Pet v2"]
     end
 
     subgraph Consumers["Consumers (Zero 3D Deps)"]
-        G --> I[TokenTracker]
-        G --> J[VS Code Codex Pet]
-        G --> K[Awesome Codex Pet]
+        G --> I["TokenTracker"]
+        G --> J["VS Code Codex Pet"]
+        G --> K["Awesome Codex Pet"]
         H --> I
         H --> J
         H --> K
     end
 
     subgraph Runtime3D["3D Runtimes (Optional)"]
-        A --> L[@codex-pet-3d/web<br/>Three.js Viewer]
-        A --> M[@codex-pet-3d/desktop<br/>Electron Companion]
-        M --> N[30 Hz Cursor Polling]
-        N --> O[calculateAngles + Damped Lerp]
-        O --> P[LookAt Head Tracking]
+        A --> L["@codex-pet-3d/web<br/>Three.js Viewer"]
+        A --> M["@codex-pet-3d/desktop<br/>Electron Companion"]
+        M --> N["30 Hz Cursor Polling"]
+        N --> O["calculateAngles + Damped Lerp"]
+        O --> P["LookAt Head Tracking"]
     end
 
     style A fill:#1e293b,stroke:#38bdf8,color:#fff
@@ -71,11 +71,11 @@ graph TB
 
 ```mermaid
 graph LR
-    spec[@codex-pet-3d/spec] --> cli[@codex-pet-3d/cli]
-    spec --> core[@codex-pet-3d/core]
+    spec["@codex-pet-3d/spec"] --> cli["@codex-pet-3d/cli"]
+    spec --> core["@codex-pet-3d/core"]
     core --> cli
-    core --> web[@codex-pet-3d/web]
-    core --> desktop[@codex-pet-3d/desktop]
+    core --> web["@codex-pet-3d/web"]
+    core --> desktop["@codex-pet-3d/desktop"]
     spec --> web
     spec --> desktop
 ```
