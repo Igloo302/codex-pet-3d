@@ -94,7 +94,7 @@ graph LR
 
 ```bash
 # Clone & install
-git clone https://github.com/your-org/codex-pet-3d.git
+git clone https://github.com/Igloo302/codex-pet-3d.git
 cd codex-pet-3d
 pnpm install
 
