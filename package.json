@@ -2,10 +2,15 @@
   "name": "codex-pet-3d-monorepo",
   "private": true,
   "scripts": {
-    "test": "pnpm -r test",
-    "build": "pnpm -r build"
+    "build": "pnpm -r build",
+    "test": "pnpm -r test && vitest run tests/e2e.test.ts",
+    "test:e2e": "vitest run tests/e2e.test.ts",
+    "validate": "node packages/cli/dist/cli.js validate",
+    "bake-2d": "node packages/cli/dist/cli.js bake-2d"
   },
   "devDependencies": {
-    "typescript": "^5.4.0"
+    "sharp": "^0.35.5",
+    "typescript": "^5.4.0",
+    "vitest": "^1.0.0"
   }
 }
