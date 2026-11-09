@@ -7,13 +7,20 @@
     "build": "tsc",
     "test": "vitest run"
   },
+  "bin": {
+    "codex-pet-3d": "./dist/cli.js"
+  },
   "dependencies": {
     "@codex-pet-3d/spec": "workspace:*",
+    "@codex-pet-3d/core": "workspace:*",
+    "commander": "^12.0.0",
+    "sharp": "^0.33.4",
     "puppeteer": "^22.12.0",
     "three": "^0.160.0",
     "esbuild": "^0.21.5"
   },
   "devDependencies": {
+    "@gltf-transform/core": "^4.5.1",
     "@types/three": "^0.160.0",
     "@types/node": "^20.0.0",
     "typescript": "^5.4.0",

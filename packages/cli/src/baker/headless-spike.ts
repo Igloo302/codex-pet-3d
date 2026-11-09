@@ -118,14 +118,15 @@ function resolveExecutablePath(): string | undefined {
   if (process.env.PUPPETEER_EXECUTABLE_PATH) {
     return process.env.PUPPETEER_EXECUTABLE_PATH;
   }
+  // Prefer the system Chrome on macOS if available; the bundled testing Chrome may not be permitted to run in this sandboxed environment.
+  if (process.platform === "darwin" && existsSync(MAC_CHROME_PATH)) {
+    return MAC_CHROME_PATH;
+  }
   try {
     const bundled = puppeteer.executablePath();
     if (bundled && existsSync(bundled)) return bundled;
   } catch {
     // Puppeteer's bundled browser was not downloaded.
-  }
-  if (process.platform === "darwin" && existsSync(MAC_CHROME_PATH)) {
-    return MAC_CHROME_PATH;
   }
   return undefined;
 }
