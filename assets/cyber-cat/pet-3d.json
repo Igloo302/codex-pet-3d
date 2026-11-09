@@ -1,0 +1,32 @@
+{
+  "$schema": "https://codex-pet-3d.net/schemas/pet-3d.schema.json",
+  "spec_version": "3d-v1.0",
+  "id": "cyber-cat--jyshen",
+  "display_name": "Cyber Cat",
+  "author": "jyshen",
+  "description": "A futuristic low-poly 3D companion for Codex.",
+  "model": "model.glb",
+  "scale": 1.0,
+  "camera": {
+    "fov": 45,
+    "position": [0, 1.2, 2.5],
+    "target": [0, 0.4, 0]
+  },
+  "look_at": {
+    "enabled": true,
+    "head_bone": "Head",
+    "max_yaw_deg": 45,
+    "max_pitch_deg": 30
+  },
+  "animations": {
+    "idle": { "clip": "Idle", "loop": true },
+    "running-right": { "clip": "Run_Right", "loop": true },
+    "running-left": { "clip": "Run_Left", "loop": true },
+    "waving": { "clip": "Wave", "loop": false },
+    "jumping": { "clip": "Jump", "loop": false },
+    "failed": { "clip": "Failed", "loop": true },
+    "waiting": { "clip": "Waiting", "loop": true },
+    "running": { "clip": "Work", "loop": true },
+    "review": { "clip": "Review", "loop": true }
+  }
+}
