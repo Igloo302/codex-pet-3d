@@ -6,7 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
 [![Vitest](https://img.shields.io/badge/tested%20with-Vitest-6e9f18.svg)](https://vitest.dev/)
 
-**Codex Pet 3D** extends the beloved [Codex Pet](https://github.com/lostfictions/codex-pet) 2D format into interactive 3D — while guaranteeing **100% backwards compatibility** with existing 2D clients (TokenTracker, VS Code Codex Pet, Awesome Codex Pet).
+**Codex Pet 3D** extends the [Awesome Codex Pet](https://github.com/legeling/awesome-codex-pet) 2D format into interactive 3D — while guaranteeing **100% backwards compatibility** with existing 2D clients (TokenTracker, VS Code pets, Awesome Codex Pet).
 
 Author a rigged, animated 3D pet once → bake to a standards-compliant 2D spritesheet → run natively as a desktop companion with cursor-following LookAt.
 
@@ -321,6 +321,7 @@ MIT © 2026 Codex Pet 3D Contributors
 
 ## Credits
 
-- Original [Codex Pet](https://github.com/lostfictions/codex-pet) by lostfictions
-- [TokenTracker](https://github.com/anthropics/tokentracker) by Anthropic
+- [Awesome Codex Pet](https://github.com/legeling/awesome-codex-pet) by legeling
+- [TokenTracker](https://github.com/xiufengsun/TokenTracker) by xiufengsun
+- [vscode-pets](https://github.com/tonybaloney/vscode-pets) by Anthony Shaw
 - glTF / Three.js / Puppeteer / Electron communities
