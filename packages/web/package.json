@@ -1,0 +1,29 @@
+{
+  "name": "@codex-pet-3d/web",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@codex-pet-3d/core": "workspace:*",
+    "@codex-pet-3d/spec": "workspace:*",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "three": "^0.160.0"
+  },
+  "devDependencies": {
+    "@testing-library/react": "^14.2.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@types/three": "^0.160.0",
+    "@vitejs/plugin-react": "^4.2.0",
+    "jsdom": "^24.0.0",
+    "typescript": "^5.4.0",
+    "vite": "^5.1.0",
+    "vitest": "^1.0.0"
+  }
+}
