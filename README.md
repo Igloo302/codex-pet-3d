@@ -247,11 +247,34 @@ Bakes a validated 3D asset to Codex Pet v2 2D format.
 2. Launches headless Chrome (Puppeteer + SwiftShader)
 3. Renders 88 frames at 2× supersample (384×416 → 192×208)
 4. Composites into 1536×2288 spritesheet
-5. Encodes lossless WebP + writes `pet.json`
+5. Encodes lossless WebP + writes `pet.json` and `submission.json`
+
+### `codex-pet-3d install <targetDir> [--target-dir <path>]`
+
+Bakes and installs a 3D pet asset directly into local Codex (`~/.codex/pets/<id>/`).
+
+```bash
+# Quick install the official 3D Cyber Cat to Codex
+pnpm run install:sample
+
+# Or install any custom 3D asset directory
+pnpm run install-codex assets/cyber-cat
+```
 
 ---
 
 ## Compatibility Notes
+
+### Codex CLI & Desktop Companion
+
+Codex reads community and custom pets from `~/.codex/pets/<pet-id>/`.
+
+1. Run `pnpm run install:sample` to bake and deploy `cyber-cat--jyshen` directly into `~/.codex/pets/cyber-cat--jyshen/`.
+2. Ensure desktop pet overlay is enabled in `~/.codex/config.toml`:
+   ```toml
+   [desktop]
+   avatar-overlay-pet-visible = true
+   ```
 
 ### TokenTracker
 

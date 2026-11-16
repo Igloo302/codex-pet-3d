@@ -2,6 +2,7 @@
 import { Command } from "commander";
 import { runValidate, formatValidationResult, type ValidationResult } from "./commands/validate.js";
 import { runBake2D } from "./commands/bake-2d.js";
+import { runInstall } from "./commands/install.js";
 
 const program = new Command();
 
@@ -70,6 +71,39 @@ program
         console.log(`Baked 2D spritesheet to ${options.out}`);
       } else {
         console.error(`Bake failed (exit ${result.exitCode}):`);
+        for (const error of result.errors ?? []) {
+          console.error(`  [${error.code}] ${error.path}: ${error.message}`);
+        }
+      }
+      process.exit(result.exitCode);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error(`Error: ${errorMessage}`);
+      process.exit(1);
+    }
+  });
+
+program
+  .command("install <targetDir>")
+  .description(
+    "Bake and install a 3D pet asset directly into local Codex (~/.codex/pets/<id>/)"
+  )
+  .option(
+    "--target-dir <path>",
+    "Custom target directory (defaults to ~/.codex/pets/<id>/)"
+  )
+  .action(async (targetDir: string, options: { targetDir?: string }) => {
+    try {
+      const result = await runInstall(targetDir, {
+        targetDir: options.targetDir,
+      });
+      if (result.success) {
+        console.log(
+          `Successfully baked and installed ${result.petId} to ${result.installedPath}`
+        );
+        console.log("It is now available in Codex and TokenTracker!");
+      } else {
+        console.error(`Install failed (exit ${result.exitCode}):`);
         for (const error of result.errors ?? []) {
           console.error(`  [${error.code}] ${error.path}: ${error.message}`);
         }

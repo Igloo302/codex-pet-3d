@@ -33,6 +33,8 @@ export const RENDER_HEIGHT = CELL_HEIGHT * SUPERSAMPLE; // 416
 export interface BakeManifest {
   id: string;
   display_name: string;
+  author?: string;
+  description?: string;
   model?: string;
   camera: {
     fov: number;
@@ -505,6 +507,21 @@ export class SpritesheetBaker {
       const petJsonPath = join(this.outDir, "pet.json");
       writeFileSync(petJsonPath, JSON.stringify(this.buildPetJson(), null, 2));
 
+      const submissionJsonPath = join(this.outDir, "submission.json");
+      writeFileSync(
+        submissionJsonPath,
+        JSON.stringify(
+          {
+            name: this.manifest.display_name,
+            author: this.manifest.author,
+            description: this.manifest.description,
+            collections: ["3d", "cyber"],
+          },
+          null,
+          2
+        )
+      );
+
       return {
         spritesheetPath,
         petJsonPath,
@@ -569,6 +586,8 @@ export class SpritesheetBaker {
     return {
       id: this.manifest.id,
       name: this.manifest.display_name,
+      displayName: this.manifest.display_name,
+      description: this.manifest.description,
       spriteVersionNumber: 2,
       spritesheetPath: "spritesheet.webp",
       frameWidth: CELL_WIDTH,
