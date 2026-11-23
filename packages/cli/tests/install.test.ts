@@ -1,13 +1,18 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { existsSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { runInstall } from "../src/commands/install.js";
 
+const HERE = dirname(fileURLToPath(import.meta.url));
+const CYBER_CAT_DIR = resolve(HERE, "../../../assets/cyber-cat");
+
 describe("runInstall", () => {
-  const tmpDir = join(__dirname, `tmp-install-test-${Date.now()}`);
+  let tmpDir: string;
 
   beforeEach(() => {
-    mkdirSync(tmpDir, { recursive: true });
+    tmpDir = mkdtempSync(join(tmpdir(), "codex-pet-install-"));
   });
 
   afterEach(() => {
@@ -32,5 +37,17 @@ describe("runInstall", () => {
     expect(result.success).toBe(false);
     expect(result.exitCode).toBe(1);
     expect(existsSync(outDir)).toBe(false);
+  });
+
+  it("rejects path traversal in manifest.id before creating any directory", async () => {
+    const manifest = JSON.parse(readFileSync(join(CYBER_CAT_DIR, "pet-3d.json"), "utf-8"));
+    manifest.id = "../../escaped-pet";
+    writeFileSync(join(tmpDir, "pet-3d.json"), JSON.stringify(manifest, null, 2));
+    writeFileSync(join(tmpDir, "model.glb"), readFileSync(join(CYBER_CAT_DIR, "model.glb")));
+
+    const result = await runInstall(tmpDir);
+    expect(result.success).toBe(false);
+    expect(result.exitCode).toBe(1);
+    expect(result.installedPath).toBeUndefined();
   });
 });

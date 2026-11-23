@@ -50,9 +50,12 @@ describe("getWindowOptions", () => {
   it("should have webPreferences with correct settings", () => {
     const options = getWindowOptions();
 
+    expect(options.skipTaskbar).toBe(true);
+    expect(options.backgroundColor).toBe("#00000000");
     expect(options.webPreferences).toBeDefined();
     expect(options.webPreferences?.nodeIntegration).toBe(false);
     expect(options.webPreferences?.contextIsolation).toBe(true);
+    expect(options.webPreferences?.sandbox).toBe(true);
     expect(options.webPreferences?.preload).toContain("preload.js");
   });
 });

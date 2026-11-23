@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "scripts": {
-    "build": "tsc && chmod +x dist/cli.js",
+    "build": "tsc && node -e \"const fs=require('node:fs'); if(process.platform!=='win32') fs.chmodSync('dist/cli.js', 0o755);\"",
     "test": "vitest run"
   },
   "bin": {

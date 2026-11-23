@@ -4,7 +4,7 @@
   "id": "cyber-cat--jyshen",
   "display_name": "Cyber Cat",
   "author": "jyshen",
-  "description": "A futuristic low-poly 3D companion for Codex.",
+  "description": "A charming, richly detailed stylized cyber cat companion for Codex.",
   "model": "model.glb",
   "scale": 1.0,
   "camera": {
@@ -24,7 +24,7 @@
     "running-left": { "clip": "Run_Left", "loop": true },
     "waving": { "clip": "Wave", "loop": false },
     "jumping": { "clip": "Jump", "loop": false },
-    "failed": { "clip": "Failed", "loop": true },
+    "failed": { "clip": "Failed", "loop": false },
     "waiting": { "clip": "Waiting", "loop": true },
     "running": { "clip": "Work", "loop": true },
     "review": { "clip": "Review", "loop": true }

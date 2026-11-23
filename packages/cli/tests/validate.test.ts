@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { readFileSync, writeFileSync, mkdirSync, rmSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync, existsSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { resolve, join } from "node:path";
 import { runValidate, formatValidationResult, type ValidationResult, type ValidationError } from "../src/commands/validate.js";
 import { Document, WebIO, AccessorType } from "@gltf-transform/core";
@@ -7,11 +8,9 @@ import { Document, WebIO, AccessorType } from "@gltf-transform/core";
 const TEST_ASSETS_DIR = resolve(__dirname, "../../../assets");
 const CYBER_CAT_DIR = join(TEST_ASSETS_DIR, "cyber-cat");
 
-// Helper to create a temporary test directory
+// Helper to create a temporary test directory in OS tmpdir
 function createTempDir(name: string): string {
-  const tempDir = join(__dirname, `tmp-${name}-${Date.now()}`);
-  mkdirSync(tempDir, { recursive: true });
-  return tempDir;
+  return mkdtempSync(join(tmpdir(), `codex-pet-validate-${name}-`));
 }
 
 // Helper to clean up temp directory
@@ -252,6 +251,21 @@ describe("runValidate", () => {
       expect(result.valid).toBe(false);
       expect(result.exitCode).toBe(1);
       expect(result.errors.some(e => e.code === "MODEL_NOT_FOUND")).toBe(true);
+    });
+
+    it("blocks path traversal in manifest.model with PATH_TRAVERSAL", async () => {
+      const tempDir = createTempDir("path-traversal");
+      tempDirs.push(tempDir);
+
+      const manifest = JSON.parse(readFileSync(join(CYBER_CAT_DIR, "pet-3d.json"), "utf-8"));
+      manifest.model = "../outside.glb";
+      writeFileSync(join(tempDir, "pet-3d.json"), JSON.stringify(manifest, null, 2));
+
+      const result = await runValidate(tempDir);
+
+      expect(result.valid).toBe(false);
+      expect(result.exitCode).toBe(1);
+      expect(result.errors.some(e => e.code === "PATH_TRAVERSAL")).toBe(true);
     });
 
     it("includes warnings from inspection", async () => {

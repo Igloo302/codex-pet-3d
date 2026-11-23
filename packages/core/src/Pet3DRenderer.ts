@@ -45,40 +45,35 @@ export class Pet3DRenderer {
 
     // Setup 3-point lighting
     this.setupLighting();
-
-    // Handle resize if canvas supports it
-    if ("addEventListener" in canvas) {
-      (canvas as EventTarget).addEventListener("resize", this.handleResize.bind(this));
-    }
   }
 
   /**
-   * Set up soft 3-point lighting (key, fill, rim)
+   * Set up rich stylized 3-point + hemisphere studio lighting (key, fill, rim, sky/ground bounce)
    */
   private setupLighting(): void {
-    // Key light - main directional light
-    const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
-    keyLight.position.set(2, 3, 2);
+    // Key light - warm-white primary directional light for crisp speculars
+    const keyLight = new THREE.DirectionalLight(0xfff6eb, 1.65);
+    keyLight.position.set(2.2, 3.4, 2.8);
     keyLight.castShadow = false;
     this.scene.add(keyLight);
     this.lights.push(keyLight);
 
-    // Fill light - softer, opposite side
-    const fillLight = new THREE.DirectionalLight(0xffffff, 0.5);
-    fillLight.position.set(-2, 1.5, 1);
+    // Fill light - cool soft fill from opposite side to reveal sculpted fur contours
+    const fillLight = new THREE.DirectionalLight(0xc7e2ff, 0.75);
+    fillLight.position.set(-2.5, 1.8, 1.6);
     this.scene.add(fillLight);
     this.lights.push(fillLight);
 
-    // Rim light - backlight for edge definition
-    const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
-    rimLight.position.set(0, 2, -3);
+    // Rim light - cyan-tinted backlight for stylized silhouette edge highlight
+    const rimLight = new THREE.DirectionalLight(0x7dd3fc, 0.95);
+    rimLight.position.set(0.2, 2.4, -3.2);
     this.scene.add(rimLight);
     this.lights.push(rimLight);
 
-    // Ambient light for overall illumination
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.3);
-    this.scene.add(ambientLight);
-    this.lights.push(ambientLight);
+    // Hemisphere sky/ground bounce for smooth Pixar-like ambient shading
+    const hemiLight = new THREE.HemisphereLight(0xe0f2fe, 0x3b2f4a, 0.85);
+    this.scene.add(hemiLight);
+    this.lights.push(hemiLight);
   }
 
   /**
@@ -141,14 +136,6 @@ export class Pet3DRenderer {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);
-  }
-
-  /**
-   * Handle canvas resize event
-   */
-  private handleResize(): void {
-    // This would be called if canvas has resize event
-    // The actual resize should be triggered externally with known dimensions
   }
 
   /**

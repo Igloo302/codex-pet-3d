@@ -11,6 +11,7 @@ export interface PetViewportProps {
   manifest: Pet3DControllerOptions["manifest"];
   state: PetState;
   onStateChange?: (state: PetState) => void;
+  onLoadError?: (error: Error) => void;
 }
 
 const clampUnit = (value: number) => Math.max(-1, Math.min(1, value));
@@ -24,12 +25,15 @@ export function PetViewport({
   manifest,
   state,
   onStateChange,
+  onLoadError,
 }: PetViewportProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const controllerRef = useRef<Pet3DController | null>(null);
   const onStateChangeRef = useRef(onStateChange);
   onStateChangeRef.current = onStateChange;
+  const onLoadErrorRef = useRef(onLoadError);
+  onLoadErrorRef.current = onLoadError;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -51,6 +55,7 @@ export function PetViewport({
       backgroundColor: 0x070b14,
       backgroundAlpha: 0,
       onStateChange: (_from, to) => onStateChangeRef.current?.(to),
+      onLoadError: (err) => onLoadErrorRef.current?.(err),
     });
     controllerRef.current = controller;
 

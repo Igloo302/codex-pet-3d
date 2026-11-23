@@ -21,10 +21,13 @@ export function getWindowOptions(
     alwaysOnTop: true,
     hasShadow: false,
     resizable: false,
+    skipTaskbar: true,
+    backgroundColor: "#00000000",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
+      sandbox: true,
     },
   };
 }

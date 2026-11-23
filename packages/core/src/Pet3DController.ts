@@ -24,15 +24,22 @@ export class Pet3DController {
   private currentAction: THREE.AnimationAction | null = null;
   private readonly headBoneName: string;
   private headBone: THREE.Bone | null = null;
+  private headBaseQuaternion: THREE.Quaternion | null = null;
   private readonly lookAtEnabled: boolean;
   private readonly maxYawRad: number;
   private readonly maxPitchRad: number;
   private readonly onStateChange?: (from: PetState, to: PetState) => void;
   private readonly onAnimationFinished?: (state: PetState) => void;
+  private readonly onLoadError?: (error: Error) => void;
   private isLoaded = false;
+  private disposed = false;
   private readonly autoStartLoop: boolean;
+  private readonly minFrameMs: number;
   private animationFrameId: number | null = null;
   private lastTime = 0;
+  private readonly tmpEuler = new THREE.Euler(0, 0, 0, "YXZ");
+  private readonly tmpQuat = new THREE.Quaternion();
+  private readonly handleMixerFinished: (event: { action: THREE.AnimationAction }) => void;
 
   constructor(options: Pet3DControllerOptions) {
     const {
@@ -40,15 +47,17 @@ export class Pet3DController {
       manifest,
       onStateChange,
       onAnimationFinished,
+      onLoadError,
       autoStartLoop = true,
+      maxFps,
       ...rendererOptions
     } = options;
 
     this.autoStartLoop = autoStartLoop;
+    this.minFrameMs = maxFps && maxFps > 0 ? 1000 / maxFps : 0;
 
     // Initialize renderer
     this.renderer = new Pet3DRenderer(rendererOptions);
-    const scene = this.renderer.getScene();
 
     // Set camera from manifest
     const [camX, camY, camZ] = manifest.camera.position;
@@ -90,18 +99,35 @@ export class Pet3DController {
 
     this.onStateChange = onStateChange;
     this.onAnimationFinished = onAnimationFinished;
+    this.onLoadError = onLoadError;
 
-    // Create animation mixer
+    // Create animation mixer and listen for one-shot completion
     this.mixer = new THREE.AnimationMixer(this.model);
-
-    // Load model
-    this.loadModel(modelUrl, manifest.animations).then(() => {
-      this.isLoaded = true;
-      // Start render loop if enabled
-      if (this.autoStartLoop) {
-        this.startAnimationLoop();
+    this.handleMixerFinished = (event) => {
+      if (event.action === this.currentAction) {
+        this.stateMachine.onAnimationFinishedHandler();
       }
-    });
+    };
+    this.mixer.addEventListener("finished", this.handleMixerFinished);
+
+    // Load model with disposal guard and error handling
+    this.loadModel(modelUrl, manifest.animations)
+      .then(() => {
+        if (this.disposed) return;
+        this.isLoaded = true;
+        if (this.autoStartLoop) {
+          this.startAnimationLoop();
+        }
+      })
+      .catch((error: unknown) => {
+        if (this.disposed) return;
+        const err = error instanceof Error ? error : new Error(String(error));
+        if (this.onLoadError) {
+          this.onLoadError(err);
+        } else {
+          console.error("[Pet3DController] Failed to load model:", err);
+        }
+      });
   }
 
   /**
@@ -114,13 +140,19 @@ export class Pet3DController {
     const loader = new GLTFLoader();
     const gltf = await loader.loadAsync(modelUrl);
 
+    if (this.disposed) {
+      this.disposeObject3D(gltf.scene);
+      return;
+    }
+
     // Add model to scene
     this.renderer.getScene().add(this.model);
     this.model.add(gltf.scene);
 
-    // Find head bone for look-at
+    // Find head bone for look-at and preserve its rest rotation
     if (this.lookAtEnabled) {
       this.headBone = this.findBone(gltf.scene, this.headBoneName);
+      this.headBaseQuaternion = this.headBone ? this.headBone.quaternion.clone() : null;
     }
 
     // Store animation clips and create actions
@@ -175,34 +207,37 @@ export class Pet3DController {
       return;
     }
 
-    if (this.currentAction) {
-      // Cross-fade from current to new action
-      this.currentAction.crossFadeTo(newAction, 0.3, true);
-    } else {
-      newAction.play();
-    }
-
-    this.currentAction = newAction;
-    newAction.reset().play();
-
-    // If it's a one-shot, set up finished callback
+    // Configure loop mode before playing
     if (isOneShotState(state)) {
       newAction.clampWhenFinished = true;
       newAction.setLoop(THREE.LoopOnce, 1);
     } else {
       newAction.setLoop(THREE.LoopRepeat, Infinity);
     }
+
+    newAction.reset().setEffectiveTimeScale(1).setEffectiveWeight(1).play();
+
+    if (this.currentAction) {
+      this.currentAction.crossFadeTo(newAction, 0.3, true);
+    }
+
+    this.currentAction = newAction;
   }
 
   /**
    * Start the animation loop
    */
   startAnimationLoop(): void {
-    if (this.animationFrameId !== null) return;
+    if (this.animationFrameId !== null || this.disposed) return;
     this.lastTime = performance.now();
     const animate = (time: number) => {
+      if (this.disposed) return;
       this.animationFrameId = requestAnimationFrame(animate);
-      const dt = (time - this.lastTime) / 1000; // seconds
+      const elapsedMs = time - this.lastTime;
+      if (this.minFrameMs > 0 && elapsedMs < this.minFrameMs) {
+        return;
+      }
+      const dt = elapsedMs / 1000; // seconds
       this.lastTime = time;
 
       this.update(dt);
@@ -225,6 +260,8 @@ export class Pet3DController {
    * Update controller (called each frame)
    */
   update(dt: number): void {
+    if (this.disposed) return;
+
     // Update animation mixer
     this.mixer.update(dt);
 
@@ -233,28 +270,22 @@ export class Pet3DController {
       const { yaw, pitch } = this.lookAtTracker.update(dt);
       this.applyLookAt(yaw, pitch);
     }
-
-    // Check for finished one-shot animations
-    if (this.currentAction && (this.currentAction as any).loop === THREE.LoopOnce) {
-      if (this.currentAction.time >= this.currentAction.getClip().duration) {
-        this.stateMachine.onAnimationFinishedHandler();
-      }
-    }
   }
 
   /**
-   * Apply look-at rotation to head bone
+   * Apply look-at rotation to head bone (pitch > 0 tilts head up, matching SpritesheetBaker)
    */
   private applyLookAt(yaw: number, pitch: number): void {
     if (!this.headBone) return;
 
-    // Create quaternion from yaw and pitch
-    const quat = new THREE.Quaternion();
-    const euler = new THREE.Euler(pitch, yaw, 0, "YXZ");
-    quat.setFromEuler(euler);
+    this.tmpEuler.set(-pitch, yaw, 0, "YXZ");
+    this.tmpQuat.setFromEuler(this.tmpEuler);
 
-    // Apply to head bone (in local space)
-    this.headBone.quaternion.slerp(quat, 0.5);
+    if (this.headBaseQuaternion) {
+      this.headBone.quaternion.copy(this.headBaseQuaternion).multiply(this.tmpQuat);
+    } else {
+      this.headBone.quaternion.copy(this.tmpQuat);
+    }
   }
 
   /**
@@ -295,13 +326,40 @@ export class Pet3DController {
   }
 
   /**
+   * Dispose of a loaded Object3D's geometries, materials, and textures
+   */
+  private disposeObject3D(root: THREE.Object3D): void {
+    const disposeMaterial = (material: THREE.Material) => {
+      const mat = material as unknown as Record<string, unknown>;
+      for (const value of Object.values(mat)) {
+        if (value instanceof THREE.Texture) {
+          value.dispose();
+        }
+      }
+      material.dispose();
+    };
+
+    root.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+        if (child.material instanceof THREE.Material) {
+          disposeMaterial(child.material);
+        } else if (Array.isArray(child.material)) {
+          child.material.forEach(disposeMaterial);
+        }
+      }
+    });
+  }
+
+  /**
    * Dispose of all resources
    */
   dispose(): void {
-    if (this.animationFrameId !== null) {
-      cancelAnimationFrame(this.animationFrameId);
-      this.animationFrameId = null;
-    }
+    if (this.disposed) return;
+    this.disposed = true;
+
+    this.stopAnimationLoop();
+    this.mixer.removeEventListener("finished", this.handleMixerFinished);
 
     // Stop all actions
     this.actions.forEach((action) => {
@@ -311,17 +369,8 @@ export class Pet3DController {
     // Dispose mixer
     this.mixer.uncacheRoot(this.model);
 
-    // Dispose model
-    this.model.traverse((child) => {
-      if (child instanceof THREE.Mesh) {
-        child.geometry.dispose();
-        if (child.material instanceof THREE.Material) {
-          child.material.dispose();
-        } else if (Array.isArray(child.material)) {
-          child.material.forEach((m) => m.dispose());
-        }
-      }
-    });
+    // Dispose model geometries, materials, and textures
+    this.disposeObject3D(this.model);
 
     // Dispose renderer
     this.renderer.dispose();
@@ -329,6 +378,8 @@ export class Pet3DController {
     // Clear maps
     this.animations.clear();
     this.actions.clear();
+    this.headBone = null;
+    this.headBaseQuaternion = null;
   }
 }
 

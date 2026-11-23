@@ -1,4 +1,4 @@
-import type { StandardAnimationState } from "@codex-pet-3d/spec";
+import type { Pet3DManifest, StandardAnimationState } from "@codex-pet-3d/spec";
 
 /**
  * Pet state machine types
@@ -63,8 +63,32 @@ export interface Pet3DControllerOptions extends Pet3DRendererOptions {
   };
   onStateChange?: (from: PetState, to: PetState) => void;
   onAnimationFinished?: (state: PetState) => void;
+  onLoadError?: (error: Error) => void;
   autoStartLoop?: boolean;
   maxFps?: number;
+}
+
+/**
+ * Converts a canonical snake_case `Pet3DManifest` into `Pet3DControllerOptions["manifest"]`.
+ */
+export function toControllerManifest(
+  specManifest: Pet3DManifest
+): Pet3DControllerOptions["manifest"] {
+  return {
+    scale: specManifest.scale,
+    camera: {
+      fov: specManifest.camera.fov,
+      position: specManifest.camera.position,
+      target: specManifest.camera.target,
+    },
+    lookAt: {
+      enabled: specManifest.look_at.enabled,
+      headBone: specManifest.look_at.head_bone,
+      maxYawDeg: specManifest.look_at.max_yaw_deg,
+      maxPitchDeg: specManifest.look_at.max_pitch_deg,
+    },
+    animations: specManifest.animations,
+  };
 }
 
 /**

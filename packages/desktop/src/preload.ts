@@ -32,11 +32,6 @@ interface DesktopPetAPI {
   setIgnoreMouseEvents: (ignore: boolean) => void;
 
   /**
-   * Request window drag to start moving the frameless window
-   */
-  dragWindow: () => void;
-
-  /**
    * Move window by relative offset
    */
   moveWindow: (offset: { x: number; y: number }) => void;
@@ -68,10 +63,6 @@ const api: DesktopPetAPI = {
 
   setIgnoreMouseEvents: (ignore: boolean) => {
     ipcRenderer.send("set-ignore-mouse-events", ignore);
-  },
-
-  dragWindow: () => {
-    ipcRenderer.send("drag-window");
   },
 
   moveWindow: (offset: { x: number; y: number }) => {

@@ -5,6 +5,7 @@ import {
   SpritesheetBaker,
   type BakeManifest,
 } from "../baker/SpritesheetBaker.js";
+import { resolveSafeSubpath } from "../utils/path-guard.js";
 
 export interface Bake2DResult {
   success: boolean;
@@ -37,7 +38,8 @@ export async function runBake2D(
       readFileSync(join(targetDir, "pet-3d.json"), "utf-8")
     ) as BakeManifest;
     const modelFile = manifest.model ?? "model.glb";
-    const glbBytes = new Uint8Array(readFileSync(join(targetDir, modelFile)));
+    const modelPath = resolveSafeSubpath(targetDir, modelFile);
+    const glbBytes = new Uint8Array(readFileSync(modelPath));
 
     await new SpritesheetBaker({
       glbBytes,

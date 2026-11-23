@@ -21,3 +21,4 @@ Thumbs.db
 # Internal scaffolding & task artifacts
 .superpowers/
 docs/superpowers/
+.codex/

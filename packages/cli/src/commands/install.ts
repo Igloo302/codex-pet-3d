@@ -2,6 +2,8 @@ import { homedir } from "node:os";
 import { join } from "node:path";
 import { readFileSync, existsSync } from "node:fs";
 import { runBake2D, type Bake2DResult } from "./bake-2d.js";
+import { runValidate } from "./validate.js";
+import { PathTraversalError, resolveSafeSubpath } from "../utils/path-guard.js";
 
 export interface InstallResult extends Bake2DResult {
   installedPath?: string;
@@ -32,17 +34,38 @@ export async function runInstall(
     };
   }
 
-  let petId = "custom-pet";
-  try {
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
-    if (manifest.id) {
-      petId = manifest.id;
-    }
-  } catch {
-    // If JSON parsing fails, runBake2D pre-flight validation will handle and report it.
+  // Validate before resolving install destination to block untrusted manifest ids/paths.
+  const validation = await runValidate(assetDir);
+  if (!validation.valid) {
+    return {
+      success: false,
+      exitCode: validation.exitCode,
+      errors: validation.errors,
+    };
   }
 
-  const outDir = options?.targetDir || join(homedir(), ".codex", "pets", petId);
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as { id: string };
+  const petId = manifest.id;
+
+  let outDir: string;
+  if (options?.targetDir) {
+    outDir = options.targetDir;
+  } else {
+    const petsRoot = join(homedir(), ".codex", "pets");
+    try {
+      outDir = resolveSafeSubpath(petsRoot, petId);
+    } catch (e) {
+      if (e instanceof PathTraversalError) {
+        return {
+          success: false,
+          exitCode: 1,
+          errors: [{ path: "/id", code: e.code, message: e.message }],
+          petId,
+        };
+      }
+      throw e;
+    }
+  }
 
   const result = await runBake2D(assetDir, { out: outDir });
 

@@ -1,11 +1,12 @@
 import { readFileSync, statSync, existsSync } from "node:fs";
-import { resolve, join } from "node:path";
+import { join } from "node:path";
 import {
   validatePet3DManifest,
   inspectGlb,
   GlbFormatError,
 } from "@codex-pet-3d/spec";
 import type { ValidationError, Pet3DManifest } from "@codex-pet-3d/spec";
+import { PathTraversalError, resolveSafeSubpath } from "../utils/path-guard.js";
 export type { ValidationError };
 
 /**
@@ -86,17 +87,30 @@ export async function runValidate(
     errors.push(...schemaResult.errors);
   }
 
-  // 4. Locate model file
+  // 4. Locate model file (guard against path traversal outside targetDir)
   const modelFile = manifest.model ?? DEFAULT_MODEL_FILE;
-  const modelPath = join(targetDir, modelFile);
+  let modelPath: string | null = null;
+  try {
+    modelPath = resolveSafeSubpath(targetDir, modelFile);
+  } catch (e) {
+    if (e instanceof PathTraversalError) {
+      errors.push({
+        path: "/model",
+        code: e.code,
+        message: e.message,
+      });
+    } else {
+      throw e;
+    }
+  }
 
-  if (!existsSync(modelPath)) {
+  if (modelPath !== null && !existsSync(modelPath)) {
     errors.push({
       path: modelPath,
       code: "MODEL_NOT_FOUND",
       message: `Model file not found: ${modelPath}`,
     });
-  } else {
+  } else if (modelPath !== null) {
     // 5. Check model file size
     const modelStats = statSync(modelPath);
     if (modelStats.size > MAX_MODEL_SIZE_BYTES) {

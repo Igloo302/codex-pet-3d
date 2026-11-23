@@ -53,7 +53,7 @@ graph TB
     style M fill:#7c3aed,stroke:#a78bfa,color:#fff
 ```
 
-**Key property:** The 2D baking pipeline (yellow) produces artifacts consumable by **any** existing Codex Pet v2 client. The 3D runtimes (purple) are purely additive.
+**Key property:** The 2D baking pipeline (green) produces artifacts consumable by **any** existing Codex Pet v2 client. The 3D runtimes (purple) are purely additive.
 
 ---
 
@@ -63,7 +63,7 @@ graph TB
 |---------|-------|---------|-------------|
 | `@codex-pet-3d/spec` | `packages/spec` | Schema, types, GLB inspection, validation | `dist/index.js` |
 | `@codex-pet-3d/core` | `packages/core` | Pure math: `calculateAngles`, LookAt, state machine | `dist/index.js` |
-| `@codex-pet-3d/cli` | `packages/cli` | `validate`, `bake-2d` commands | `dist/cli.js` (bin) |
+| `@codex-pet-3d/cli` | `packages/cli` | `validate`, `bake-2d`, `install` commands | `dist/cli.js` (bin) |
 | `@codex-pet-3d/web` | `packages/web` | Interactive 3D viewer (Vite + React + Three.js) | `index.html` |
 | `@codex-pet-3d/desktop` | `packages/desktop` | Electron frameless companion with LookAt | `dist/main.js` |
 
@@ -193,7 +193,7 @@ my-pet/
     "running-left": { "clip": "Run_Left", "loop": true },
     "waving": { "clip": "Wave", "loop": false },
     "jumping": { "clip": "Jump", "loop": false },
-    "failed": { "clip": "Failed", "loop": true },
+    "failed": { "clip": "Failed", "loop": false },
     "waiting": { "clip": "Waiting", "loop": true },
     "running": { "clip": "Work", "loop": true },
     "review": { "clip": "Review", "loop": true }
@@ -309,16 +309,16 @@ pnpm run test
 pnpm run test:e2e
 ```
 
+### Run Fast Unit Tests Only (No Headless Chrome)
+
+```bash
+pnpm run test:unit
+```
+
 ### Type-Check All Packages
 
 ```bash
-pnpm -r exec tsc --noEmit
-```
-
-### Lint (if configured)
-
-```bash
-pnpm run lint
+pnpm run typecheck
 ```
 
 ---

@@ -99,7 +99,7 @@ The baker renders **16 static head orientations** (rows 9–10 of the spriteshee
   "running-left": { "clip": "Run_Left", "loop": true },
   "waving": { "clip": "Wave", "loop": false },
   "jumping": { "clip": "Jump", "loop": false },
-  "failed": { "clip": "Failed", "loop": true },
+  "failed": { "clip": "Failed", "loop": false },
   "waiting": { "clip": "Waiting", "loop": true },
   "running": { "clip": "Work", "loop": true },
   "review": { "clip": "Review", "loop": true }
@@ -115,7 +115,7 @@ Nine **canonical animation states** are required. Each maps to a GLB animation c
 | `running-left` | ✓ | Moving left |
 | `waving` | ✗ | Greeting / one-shot |
 | `jumping` | ✗ | Excitement / one-shot |
-| `failed` | ✓ | Error / sad state |
+| `failed` | ✗ | Error / sad one-shot |
 | `waiting` | ✓ | Loading / thinking |
 | `running` | ✓ | Generic forward run |
 | `review` | ✓ | Code review / focus |
@@ -168,7 +168,8 @@ The **bake-2d** pipeline (`@codex-pet-3d/cli`) consumes a valid 3D asset directo
 ```
 <out-dir>/
 ├── spritesheet.webp   # 1536×2288 lossless WebP, 8 cols × 11 rows
-└── pet.json           # Codex Pet v2 manifest
+├── pet.json           # Codex Pet v2 manifest
+└── submission.json    # Gallery metadata (name, author, description, collections)
 ```
 
 ### 5.2 Spritesheet Geometry
@@ -354,7 +355,10 @@ codex-pet-3d validate ./my-pet --json
 # Bake to 2D Codex Pet v2
 codex-pet-3d bake-2d ./my-pet --out ./dist
 
-# Outputs: ./dist/spritesheet.webp + ./dist/pet.json
+# Bake and install directly into local Codex (~/.codex/pets/<id>/)
+codex-pet-3d install ./my-pet
+
+# Outputs: ./dist/spritesheet.webp + ./dist/pet.json + ./dist/submission.json
 ```
 
 ---

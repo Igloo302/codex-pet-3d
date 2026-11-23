@@ -1,9 +1,15 @@
 {
   "name": "codex-pet-3d-monorepo",
   "private": true,
+  "engines": {
+    "node": ">=20.0.0",
+    "pnpm": ">=9.0.0"
+  },
   "scripts": {
     "build": "pnpm -r build",
+    "typecheck": "pnpm -r exec tsc --noEmit",
     "test": "pnpm -r test && vitest run tests/e2e.test.ts",
+    "test:unit": "pnpm --filter @codex-pet-3d/spec --filter @codex-pet-3d/core --filter @codex-pet-3d/desktop --filter @codex-pet-3d/web test && pnpm --filter @codex-pet-3d/cli exec vitest run tests/validate.test.ts tests/install.test.ts",
     "test:e2e": "vitest run tests/e2e.test.ts",
     "validate": "node packages/cli/dist/cli.js validate",
     "bake-2d": "node packages/cli/dist/cli.js bake-2d",

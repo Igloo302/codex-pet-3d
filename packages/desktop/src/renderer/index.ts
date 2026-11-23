@@ -1,19 +1,26 @@
-import { Pet3DController } from "@codex-pet-3d/core";
-import type { StandardAnimationState } from "@codex-pet-3d/spec";
+import { Pet3DController, toControllerManifest } from "@codex-pet-3d/core";
+import type { Pet3DManifest, StandardAnimationState } from "@codex-pet-3d/spec";
 
-// Manifest configuration matching the cyber-cat sample asset
-const MANIFEST = {
+// Fallback manifest matching assets/cyber-cat/pet-3d.json in case fetch fails
+const FALLBACK_MANIFEST: Pet3DManifest = {
+  $schema: "https://codex-pet-3d.net/schemas/pet-3d.schema.json",
+  spec_version: "3d-v1.0",
+  id: "cyber-cat--jyshen",
+  display_name: "Cyber Cat",
+  author: "jyshen",
+  description: "A charming, richly detailed stylized cyber cat companion for Codex.",
+  model: "model.glb",
   scale: 1.0,
   camera: {
     fov: 45,
-    position: [0, 0, 3] as [number, number, number],
-    target: [0, 0, 0] as [number, number, number],
+    position: [0, 1.2, 2.5],
+    target: [0, 0.4, 0],
   },
-  lookAt: {
+  look_at: {
     enabled: true,
-    headBone: "Head",
-    maxYawDeg: 45,
-    maxPitchDeg: 30,
+    head_bone: "Head",
+    max_yaw_deg: 45,
+    max_pitch_deg: 30,
   },
   animations: {
     idle: { clip: "Idle", loop: true },
@@ -24,30 +31,49 @@ const MANIFEST = {
     failed: { clip: "Failed", loop: false },
     waiting: { clip: "Waiting", loop: true },
     running: { clip: "Work", loop: true },
-    review: { clip: "Review", loop: false },
-  } as Record<StandardAnimationState, { clip: string; loop: boolean }>,
+    review: { clip: "Review", loop: true },
+  },
 };
 
-// Model URL - relative to renderer/index.html with local bundled asset
-const MODEL_URL = "./assets/cyber-cat/model.glb";
-
-// Get canvas element
-const canvas = document.getElementById("pet-canvas") as HTMLCanvasElement;
-if (!canvas) {
-  throw new Error("Canvas element not found");
+async function loadManifest(): Promise<Pet3DManifest> {
+  try {
+    const res = await fetch("./assets/cyber-cat/pet-3d.json");
+    if (res.ok) {
+      return (await res.json()) as Pet3DManifest;
+    }
+  } catch {
+    // Fall back to embedded canonical manifest when local fetch is unavailable
+  }
+  return FALLBACK_MANIFEST;
 }
 
-// Initialize controller with autoStartLoop: false to avoid dual render loops
-const controller = new Pet3DController({
-  canvas,
-  width: 220,
-  height: 240,
-  modelUrl: MODEL_URL,
-  manifest: MANIFEST,
-  backgroundColor: 0x000000,
-  backgroundAlpha: 0,
-  autoStartLoop: false,
-});
+let controllerInstance: Pet3DController | null = null;
+
+async function bootstrap(): Promise<void> {
+  const specManifest = await loadManifest();
+  const MANIFEST = toControllerManifest(specManifest);
+
+  // Model URL - relative to renderer/index.html with local bundled asset
+  const MODEL_URL = `./assets/cyber-cat/${specManifest.model}`;
+
+  // Get canvas element
+  const canvas = document.getElementById("pet-canvas") as HTMLCanvasElement;
+  if (!canvas) {
+    throw new Error("Canvas element not found");
+  }
+
+  // Initialize controller with autoStartLoop: false to avoid dual render loops
+  const controller = new Pet3DController({
+    canvas,
+    width: 220,
+    height: 240,
+    modelUrl: MODEL_URL,
+    manifest: MANIFEST,
+    backgroundColor: 0x000000,
+    backgroundAlpha: 0,
+    autoStartLoop: false,
+  });
+  controllerInstance = controller;
 
 // IPC cursor tracking
 let currentCursorX = 0;
@@ -149,6 +175,16 @@ window.addEventListener("beforeunload", () => {
 let isDragging = false;
 let dragStartX = 0;
 let dragStartY = 0;
+let lastHitTestTime = 0;
+let lastIgnoreMouseEvents: boolean | null = null;
+const HIT_TEST_INTERVAL_MS = 33; // ~30Hz throttle to avoid GPU readPixels stalls
+const hitTestPixel = new Uint8Array(4);
+
+function setClickThrough(ignore: boolean): void {
+  if (lastIgnoreMouseEvents === ignore) return;
+  lastIgnoreMouseEvents = ignore;
+  window.desktopPet?.setIgnoreMouseEvents(ignore);
+}
 
 window.addEventListener("mousedown", (e) => {
   if (e.button === 0) {
@@ -168,6 +204,10 @@ window.addEventListener("mousemove", (e) => {
     return;
   }
 
+  const now = performance.now();
+  if (now - lastHitTestTime < HIT_TEST_INTERVAL_MS) return;
+  lastHitTestTime = now;
+
   // Pixel alpha hit-testing: ignore mouse events on transparent background so windows beneath can be clicked
   try {
     const gl = controller.getRenderer().getRenderer().getContext() as WebGLRenderingContext | WebGL2RenderingContext;
@@ -176,12 +216,11 @@ window.addEventListener("mousemove", (e) => {
       const x = Math.floor((e.clientX - rect.left) * (canvas.width / rect.width));
       const y = Math.floor((rect.bottom - e.clientY) * (canvas.height / rect.height));
       if (x >= 0 && x < canvas.width && y >= 0 && y < canvas.height) {
-        const pixel = new Uint8Array(4);
-        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
-        const isOpaque = pixel[3] > 10;
-        window.desktopPet?.setIgnoreMouseEvents(!isOpaque);
+        gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, hitTestPixel);
+        const isOpaque = hitTestPixel[3] > 10;
+        setClickThrough(!isOpaque);
       } else {
-        window.desktopPet?.setIgnoreMouseEvents(true);
+        setClickThrough(true);
       }
     }
   } catch {
@@ -195,7 +234,7 @@ window.addEventListener("mouseup", () => {
 
 window.addEventListener("mouseleave", () => {
   if (!isDragging) {
-    window.desktopPet?.setIgnoreMouseEvents(true);
+    setClickThrough(true);
   }
 });
 
@@ -213,5 +252,8 @@ window.addEventListener("contextmenu", (e) => {
   e.preventDefault();
   window.desktopPet?.showContextMenu();
 });
+}
 
-export { controller };
+void bootstrap();
+
+export { controllerInstance as controller };

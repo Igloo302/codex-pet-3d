@@ -1,8 +1,5 @@
-import { existsSync, mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import * as esbuild from "esbuild";
 import puppeteer from "puppeteer";
 import type { Page } from "puppeteer";
 import sharp from "sharp";
@@ -15,6 +12,11 @@ import {
   type SampleSpec,
   type Vec3,
 } from "./AABBCalculator.js";
+import {
+  bundleBrowserScript,
+  getSwiftShaderArgs,
+  resolveExecutablePath,
+} from "./browser-utils.js";
 
 /* ------------------------------------------------------------------ *
  * Codex Pet v2 spritesheet geometry (8 cols x 11 rows).
@@ -36,6 +38,7 @@ export interface BakeManifest {
   author?: string;
   description?: string;
   model?: string;
+  scale?: number;
   camera: {
     fov: number;
     position: [number, number, number];
@@ -109,7 +112,8 @@ interface SessionWindow {
     glbBase64: string,
     width: number,
     height: number,
-    headBoneName: string
+    headBoneName: string,
+    scale: number
   ) => Promise<ClipInfo[]>;
   __bakeSession: {
     sampleBounds: (samples: SampleSpec[]) => Bounds3[];
@@ -192,13 +196,16 @@ class BakeSession {
 
     this.scene = new THREE.Scene();
     this.camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 100);
-    this.scene.add(new THREE.AmbientLight(0xffffff, 1.5));
-    const key = new THREE.DirectionalLight(0xffffff, 2.0);
-    key.position.set(3, 4, 5);
+    this.scene.add(new THREE.HemisphereLight(0xe0f2fe, 0x3b2f4a, 0.9));
+    const key = new THREE.DirectionalLight(0xfff6eb, 1.7);
+    key.position.set(2.2, 3.4, 2.8);
     this.scene.add(key);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.6);
-    fill.position.set(-3, 2, -2);
+    const fill = new THREE.DirectionalLight(0xc7e2ff, 0.75);
+    fill.position.set(-2.5, 1.8, 1.6);
     this.scene.add(fill);
+    const rim = new THREE.DirectionalLight(0x7dd3fc, 0.95);
+    rim.position.set(0.2, 2.4, -3.2);
+    this.scene.add(rim);
 
     this.gltf = null;
     this.mixer = null;
@@ -206,12 +213,15 @@ class BakeSession {
     this.headBone = null;
   }
 
-  async init(glbBase64, headBoneName) {
+  async init(glbBase64, headBoneName, scale) {
     const bytes = decodeBase64(glbBase64);
     const loader = new GLTFLoader();
     this.gltf = await new Promise((resolve, reject) => {
       loader.parse(bytes.buffer, "", resolve, reject);
     });
+    if (typeof scale === "number" && scale > 0 && scale !== 1) {
+      this.gltf.scene.scale.setScalar(scale);
+    }
     this.scene.add(this.gltf.scene);
 
     this.mixer = new THREE.AnimationMixer(this.gltf.scene);
@@ -305,77 +315,19 @@ class BakeSession {
   }
 }
 
-window.__bakeCreate = async function (glbBase64, width, height, headBoneName) {
+window.__bakeCreate = async function (glbBase64, width, height, headBoneName, scale) {
   const session = new BakeSession(width, height);
-  const clips = await session.init(glbBase64, headBoneName);
+  const clips = await session.init(glbBase64, headBoneName, scale);
   window.__bakeSession = session;
   return clips;
 };
 `;
 
-const SWIFTSHADER_ARGS = [
-  "--no-sandbox",
-  "--disable-setuid-sandbox",
-  "--disable-dev-shm-usage",
-  "--enable-unsafe-swiftshader",
-  "--use-gl=angle",
-  "--use-angle=swiftshader",
-  "--enable-webgl",
-  "--ignore-gpu-blocklist",
-];
-
-const MAC_CHROME_PATH =
-  "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-
-// Both src/baker and dist/baker sit two levels below the package root.
-const PACKAGE_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  ".."
-);
-
-function resolveExecutablePath(): string | undefined {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    return process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-  if (process.platform === "darwin" && existsSync(MAC_CHROME_PATH)) {
-    return MAC_CHROME_PATH;
-  }
-  try {
-    const bundled = puppeteer.executablePath();
-    if (bundled && existsSync(bundled)) return bundled;
-  } catch {
-    // Bundled browser was not downloaded.
-  }
-  return undefined;
-}
-
-async function bundleBrowserScript(): Promise<string> {
-  const result = await esbuild.build({
-    stdin: {
-      contents: BROWSER_SOURCE,
-      resolveDir: PACKAGE_ROOT,
-      sourcefile: "bake-browser-entry.js",
-      loader: "js",
-    },
-    bundle: true,
-    write: false,
-    format: "iife",
-    platform: "browser",
-    target: "es2020",
-    logLevel: "silent",
-    nodePaths: [path.join(PACKAGE_ROOT, "node_modules")],
-  });
-  if (!result.outputFiles || result.outputFiles.length === 0) {
-    throw new Error("esbuild produced no browser bundle");
-  }
-  return result.outputFiles[0].text;
-}
-
 function createSession(
   page: Page,
   glbBase64: string,
-  bone: string
+  bone: string,
+  scale: number
 ): Promise<ClipInfo[]> {
   return page.evaluate(
     (args) =>
@@ -383,9 +335,10 @@ function createSession(
         args.g,
         args.w,
         args.h,
-        args.b
+        args.b,
+        args.s
       ),
-    { g: glbBase64, w: RENDER_WIDTH, h: RENDER_HEIGHT, b: bone }
+    { g: glbBase64, w: RENDER_WIDTH, h: RENDER_HEIGHT, b: bone, s: scale }
   );
 }
 
@@ -430,11 +383,11 @@ export class SpritesheetBaker {
   async bake(): Promise<BakeOutput> {
     mkdirSync(this.outDir, { recursive: true });
 
-    const bundle = await bundleBrowserScript();
+    const bundle = await bundleBrowserScript(BROWSER_SOURCE, "bake-browser-entry.js");
     const executablePath = resolveExecutablePath();
     const browser = await puppeteer.launch({
       headless: true,
-      args: SWIFTSHADER_ARGS,
+      args: getSwiftShaderArgs(),
       ...(executablePath ? { executablePath } : {}),
     });
 
@@ -451,7 +404,8 @@ export class SpritesheetBaker {
       const clips = await createSession(
         page,
         glbBase64,
-        this.manifest.look_at.head_bone
+        this.manifest.look_at.head_bone,
+        this.manifest.scale ?? 1.0
       );
       const durationByClip = new Map(clips.map((c) => [c.name, c.duration]));
       const idleClip = this.manifest.animations["idle"]?.clip ?? clips[0]?.name ?? "Idle";
@@ -515,7 +469,7 @@ export class SpritesheetBaker {
             name: this.manifest.display_name,
             author: this.manifest.author,
             description: this.manifest.description,
-            collections: ["3d", "cyber"],
+            collections: ["3d"],
           },
           null,
           2

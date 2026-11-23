@@ -80,4 +80,37 @@ describe("validatePet3DManifest", () => {
       result.errors.some(e => e.path === "/animations/idle" && e.code === "required")
     ).toBe(true);
   });
+
+  it("rejects unsafe id values (path traversal or uppercase/spaces)", () => {
+    for (const badId of ["../evil", "foo/bar", "Bad ID", ""]) {
+      const result = validatePet3DManifest({ ...validManifest, id: badId });
+      expect(result.valid).toBe(false);
+      expect(result.errors.some(e => e.path === "/id")).toBe(true);
+    }
+  });
+
+  it("rejects invalid spec_version, non-positive scale, and out-of-range fov", () => {
+    expect(validatePet3DManifest({ ...validManifest, spec_version: "2d-v1" }).valid).toBe(false);
+    expect(validatePet3DManifest({ ...validManifest, scale: 0 }).valid).toBe(false);
+    expect(validatePet3DManifest({ ...validManifest, scale: -1 }).valid).toBe(false);
+    expect(
+      validatePet3DManifest({ ...validManifest, camera: { ...validManifest.camera, fov: 0 } }).valid
+    ).toBe(false);
+    expect(
+      validatePet3DManifest({ ...validManifest, camera: { ...validManifest.camera, fov: 180 } }).valid
+    ).toBe(false);
+  });
+
+  it("rejects unknown animation states beyond the 9 canonical keys", () => {
+    const invalid = {
+      ...validManifest,
+      animations: {
+        ...validManifest.animations,
+        dancing: { clip: "Dance", loop: true },
+      },
+    };
+    const result = validatePet3DManifest(invalid);
+    expect(result.valid).toBe(false);
+    expect(result.errors.some(e => e.code === "additionalProperties")).toBe(true);
+  });
 });

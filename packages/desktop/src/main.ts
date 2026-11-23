@@ -111,7 +111,8 @@ function stopCursorPolling(): void {
 /**
  * IPC handler for setting ignore mouse events (click-through)
  */
-ipcMain.on("set-ignore-mouse-events", (_event, ignore: boolean) => {
+ipcMain.on("set-ignore-mouse-events", (_event, ignore: unknown) => {
+  if (typeof ignore !== "boolean") return;
   if (mainWindow && !mainWindow.isDestroyed()) {
     if (ignore) {
       mainWindow.setIgnoreMouseEvents(true, { forward: true });
@@ -124,20 +125,20 @@ ipcMain.on("set-ignore-mouse-events", (_event, ignore: boolean) => {
 /**
  * IPC handler for moving the frameless window
  */
-ipcMain.on("move-window", (_event, offset: { x: number; y: number }) => {
+ipcMain.on("move-window", (_event, offset: unknown) => {
+  if (
+    !offset ||
+    typeof offset !== "object" ||
+    typeof (offset as { x?: unknown }).x !== "number" ||
+    typeof (offset as { y?: unknown }).y !== "number"
+  ) {
+    return;
+  }
+  const { x: dx, y: dy } = offset as { x: number; y: number };
+  if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
   if (mainWindow && !mainWindow.isDestroyed()) {
     const [x, y] = mainWindow.getPosition();
-    mainWindow.setPosition(Math.round(x + offset.x), Math.round(y + offset.y));
-  }
-});
-
-/**
- * IPC handler for dragging the frameless window
- */
-ipcMain.on("drag-window", (_event) => {
-  if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.setIgnoreMouseEvents(false);
-    mainWindow.webContents.send("drag-window-start");
+    mainWindow.setPosition(Math.round(x + dx), Math.round(y + dy));
   }
 });
 

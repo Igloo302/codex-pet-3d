@@ -17,7 +17,7 @@ program
   .description("Validate a pet-3d asset directory")
   .option("--json", "Output results as JSON", false)
   .action(async (targetDir: string, options: { json?: boolean }) => {
-    const jsonOutput = program.opts().json ?? options.json;
+    const jsonOutput = Boolean(program.opts().json || options.json);
 
     try {
       const result = await runValidate(targetDir, { json: jsonOutput });

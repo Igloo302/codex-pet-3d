@@ -1,8 +1,9 @@
-import { existsSync } from "node:fs";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import * as esbuild from "esbuild";
 import puppeteer from "puppeteer";
+import {
+  bundleBrowserScript,
+  getSwiftShaderArgs,
+  resolveExecutablePath,
+} from "./browser-utils.js";
 
 export interface HeadlessRenderResult {
   data: Uint8Array;
@@ -16,27 +17,6 @@ interface BrowserRenderResult {
   width: number;
   height: number;
 }
-
-const SWIFTSHADER_ARGS = [
-  "--no-sandbox",
-  "--disable-setuid-sandbox",
-  "--disable-dev-shm-usage",
-  "--enable-unsafe-swiftshader",
-  "--use-gl=angle",
-  "--use-angle=swiftshader",
-  "--enable-webgl",
-  "--ignore-gpu-blocklist",
-];
-
-const MAC_CHROME_PATH = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
-
-// Both `src/baker` and `dist/baker` live two levels below the package root, so
-// the same relative walk finds `packages/cli/node_modules` in dev and in build.
-const PACKAGE_ROOT = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  ".."
-);
 
 /**
  * Browser-side renderer. esbuild bundles this (with Three.js + GLTFLoader)
@@ -113,46 +93,6 @@ window.__renderHeadlessFrame = async function (glbBase64, width, height) {
 };
 `;
 
-/** Resolve a usable Chrome binary for offline/CI environments. */
-function resolveExecutablePath(): string | undefined {
-  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-    return process.env.PUPPETEER_EXECUTABLE_PATH;
-  }
-  // Prefer the system Chrome on macOS if available; the bundled testing Chrome may not be permitted to run in this sandboxed environment.
-  if (process.platform === "darwin" && existsSync(MAC_CHROME_PATH)) {
-    return MAC_CHROME_PATH;
-  }
-  try {
-    const bundled = puppeteer.executablePath();
-    if (bundled && existsSync(bundled)) return bundled;
-  } catch {
-    // Puppeteer's bundled browser was not downloaded.
-  }
-  return undefined;
-}
-
-async function bundleBrowserScript(): Promise<string> {
-  const result = await esbuild.build({
-    stdin: {
-      contents: BROWSER_SOURCE,
-      resolveDir: PACKAGE_ROOT,
-      sourcefile: "headless-render-entry.js",
-      loader: "js",
-    },
-    bundle: true,
-    write: false,
-    format: "iife",
-    platform: "browser",
-    target: "es2020",
-    logLevel: "silent",
-    nodePaths: [path.join(PACKAGE_ROOT, "node_modules")],
-  });
-  if (!result.outputFiles || result.outputFiles.length === 0) {
-    throw new Error("esbuild produced no browser bundle");
-  }
-  return result.outputFiles[0].text;
-}
-
 /**
  * Render a GLB model to a transparent RGBA frame using headless Chromium with
  * SwiftShader software WebGL 2. Works without a display server or hardware GPU.
@@ -162,11 +102,14 @@ export async function renderHeadlessFrame(
   width: number,
   height: number
 ): Promise<HeadlessRenderResult> {
-  const bundle = await bundleBrowserScript();
+  const bundle = await bundleBrowserScript(
+    BROWSER_SOURCE,
+    "headless-render-entry.js"
+  );
   const executablePath = resolveExecutablePath();
   const browser = await puppeteer.launch({
     headless: true,
-    args: SWIFTSHADER_ARGS,
+    args: getSwiftShaderArgs(),
     ...(executablePath ? { executablePath } : {}),
   });
 

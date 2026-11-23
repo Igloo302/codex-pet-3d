@@ -1,30 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { Pet3DControllerOptions, PetState } from "@codex-pet-3d/core";
-import { STANDARD_ANIMATION_STATES } from "@codex-pet-3d/spec";
+import { toControllerManifest, type PetState } from "@codex-pet-3d/core";
+import { STANDARD_ANIMATION_STATES, type Pet3DManifest } from "@codex-pet-3d/spec";
 import { ActionControls, ACTION_LABELS } from "./components/ActionControls";
 import { ModelDropzone } from "./components/ModelDropzone";
 import { PetViewport } from "./components/PetViewport";
 import sampleManifest from "../../../assets/cyber-cat/pet-3d.json";
 import sampleModelUrl from "../../../assets/cyber-cat/model.glb?url";
 
-type ControllerManifest = Pet3DControllerOptions["manifest"];
-
 /** Translate the snake_case spec manifest into the controller's option shape. */
-const MANIFEST: ControllerManifest = {
-  scale: sampleManifest.scale,
-  camera: {
-    fov: sampleManifest.camera.fov,
-    position: sampleManifest.camera.position as [number, number, number],
-    target: sampleManifest.camera.target as [number, number, number],
-  },
-  lookAt: {
-    enabled: sampleManifest.look_at.enabled,
-    headBone: sampleManifest.look_at.head_bone,
-    maxYawDeg: sampleManifest.look_at.max_yaw_deg,
-    maxPitchDeg: sampleManifest.look_at.max_pitch_deg,
-  },
-  animations: sampleManifest.animations as ControllerManifest["animations"],
-};
+const MANIFEST = toControllerManifest(sampleManifest as unknown as Pet3DManifest);
 
 interface ModelSource {
   url: string;
@@ -126,6 +110,10 @@ export function App() {
           manifest={MANIFEST}
           state={currentState}
           onStateChange={setCurrentState}
+          onLoadError={(err) => {
+            setStatus(`Failed to load model: ${err.message}`);
+            setIsError(true);
+          }}
         />
 
         <aside className="side-panel">

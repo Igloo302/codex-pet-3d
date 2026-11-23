@@ -18,6 +18,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'
-      - run: pnpm install
+      - run: pnpm install --frozen-lockfile
       - run: pnpm -r build
+      - run: pnpm -r exec tsc --noEmit
       - run: pnpm -r test
+      - run: pnpm run test:e2e

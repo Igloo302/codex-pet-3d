@@ -2,10 +2,11 @@ import { describe, it, expect, afterEach } from "vitest";
 import {
   readFileSync,
   writeFileSync,
-  mkdirSync,
+  mkdtempSync,
   rmSync,
   existsSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import sharp from "sharp";
@@ -24,9 +25,7 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const CYBER_CAT_DIR = resolve(HERE, "../../../assets/cyber-cat");
 
 function createTempDir(name: string): string {
-  const dir = join(HERE, `tmp-${name}-${Date.now()}`);
-  mkdirSync(dir, { recursive: true });
-  return dir;
+  return mkdtempSync(join(tmpdir(), `codex-pet-bake-${name}-`));
 }
 
 const tempDirs: string[] = [];

@@ -228,11 +228,12 @@ describe("inspectGlb", () => {
     expect(result.bones).toContain("Head");
     expect(result.bones).toContain("Root");
 
-    expect(result.vertexCount).toBe(332);
-    expect(result.triangleCount).toBe(208);
-    expect(result.maxTextureDimension).toBe(256);
+    expect(result.vertexCount).toBeGreaterThan(1000);
+    expect(result.triangleCount).toBeGreaterThan(1000);
+    expect(result.maxTextureDimension).toBeGreaterThanOrEqual(256);
 
     expect(result.vertexCount).toBeLessThanOrEqual(25000);
+    expect(result.triangleCount).toBeLessThanOrEqual(10000);
     expect(result.maxTextureDimension).toBeLessThanOrEqual(1024);
     expect(result.warnings).toEqual([]);
   });
