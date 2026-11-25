@@ -35,4 +35,33 @@ describe("ModelDropzone", () => {
     expect(onModel.mock.calls[0][0]).toBeInstanceOf(Uint8Array);
     expect(onError).not.toHaveBeenCalled();
   });
+
+  it("reads a pet-3d.json file when onManifestJson is provided", async () => {
+    const onModel = vi.fn();
+    const onManifestJson = vi.fn();
+    const onError = vi.fn();
+    render(
+      <ModelDropzone
+        onModel={onModel}
+        onManifestJson={onManifestJson}
+        onError={onError}
+      />,
+    );
+
+    const dropzone = screen.getByRole("button");
+    const jsonText = JSON.stringify({
+      id: "demo--user",
+      camera: { fov: 45, position: [0, 1, 2], target: [0, 0, 0] },
+      animations: { idle: { clip: "Idle", loop: true } },
+    });
+    const jsonFile = new File([jsonText], "pet-3d.json", { type: "application/json" });
+    fireEvent.drop(dropzone, { dataTransfer: { files: [jsonFile] } });
+
+    await vi.waitFor(() => {
+      expect(onManifestJson).toHaveBeenCalledTimes(1);
+    });
+    expect(onManifestJson.mock.calls[0][1]).toBe("pet-3d.json");
+    expect(onManifestJson.mock.calls[0][0].id).toBe("demo--user");
+    expect(onError).not.toHaveBeenCalled();
+  });
 });

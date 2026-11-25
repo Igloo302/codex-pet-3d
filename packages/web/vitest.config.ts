@@ -3,12 +3,16 @@ import react from "@vitejs/plugin-react";
 
 const coreSrc = new URL("../core/src/index.ts", import.meta.url).pathname;
 const specSrc = new URL("../spec/src/types.ts", import.meta.url).pathname;
+const specGlbSrc = new URL("../spec/src/glb.ts", import.meta.url).pathname;
+const specErrorsSrc = new URL("../spec/src/errors.ts", import.meta.url).pathname;
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
       "@codex-pet-3d/core": coreSrc,
+      "@codex-pet-3d/spec/glb": specGlbSrc,
+      "@codex-pet-3d/spec/errors": specErrorsSrc,
       "@codex-pet-3d/spec": specSrc,
     },
   },

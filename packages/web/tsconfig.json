@@ -8,7 +8,9 @@
     "baseUrl": ".",
     "paths": {
       "@codex-pet-3d/core": ["../core/src/index.ts"],
-      "@codex-pet-3d/spec": ["../spec/src/types.ts"]
+      "@codex-pet-3d/spec": ["../spec/src/types.ts"],
+      "@codex-pet-3d/spec/glb": ["../spec/src/glb.ts"],
+      "@codex-pet-3d/spec/errors": ["../spec/src/errors.ts"]
     },
     "types": ["vite/client"],
     "noEmit": true,

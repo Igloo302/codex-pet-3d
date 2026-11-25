@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer, IpcRendererEvent } from "electron";
 import type { StandardAnimationState } from "@codex-pet-3d/spec";
+import type { LoadedPetPayload } from "./pet-registry";
 
 /**
  * Cursor update payload received from main process
@@ -17,10 +18,27 @@ export interface DragWindowPayload {
   y: number;
 }
 
+export interface WindowSizePayload {
+  width: number;
+  height: number;
+}
+
+export interface InitialDesktopState {
+  pet: LoadedPetPayload | null;
+  isLookAtEnabled: boolean;
+  width: number;
+  height: number;
+}
+
 /**
  * Exposed API for the renderer process
  */
 interface DesktopPetAPI {
+  /**
+   * Fetch initial pet payload, lookAt state, and scaled window size.
+   */
+  getInitialState: () => Promise<InitialDesktopState>;
+
   /**
    * Listen for cursor position updates from main process (30Hz polling)
    */
@@ -42,7 +60,7 @@ interface DesktopPetAPI {
   showContextMenu: () => void;
 
   /**
-   * Listen for action state change request from context menu
+   * Listen for action state change request from context menu or Codex sync
    */
   onPlayAnimation: (callback: (state: StandardAnimationState) => void) => () => void;
 
@@ -50,9 +68,21 @@ interface DesktopPetAPI {
    * Listen for lookAt toggle from context menu
    */
   onToggleLookAt: (callback: (enabled: boolean) => void) => () => void;
+
+  /**
+   * Listen for pet switches from context/tray menu
+   */
+  onPetChanged: (callback: (payload: LoadedPetPayload) => void) => () => void;
+
+  /**
+   * Listen for window scale resize updates from main process
+   */
+  onWindowResize: (callback: (size: WindowSizePayload) => void) => () => void;
 }
 
 const api: DesktopPetAPI = {
+  getInitialState: () => ipcRenderer.invoke("get-initial-state") as Promise<InitialDesktopState>,
+
   onCursorUpdate: (callback: (payload: CursorUpdatePayload) => void) => {
     const listener = (_event: IpcRendererEvent, payload: CursorUpdatePayload) => {
       callback(payload);
@@ -87,6 +117,22 @@ const api: DesktopPetAPI = {
     };
     ipcRenderer.on("toggle-look-at", listener);
     return () => ipcRenderer.removeListener("toggle-look-at", listener);
+  },
+
+  onPetChanged: (callback: (payload: LoadedPetPayload) => void) => {
+    const listener = (_event: IpcRendererEvent, payload: LoadedPetPayload) => {
+      callback(payload);
+    };
+    ipcRenderer.on("pet-changed", listener);
+    return () => ipcRenderer.removeListener("pet-changed", listener);
+  },
+
+  onWindowResize: (callback: (size: WindowSizePayload) => void) => {
+    const listener = (_event: IpcRendererEvent, size: WindowSizePayload) => {
+      callback(size);
+    };
+    ipcRenderer.on("window-resize", listener);
+    return () => ipcRenderer.removeListener("window-resize", listener);
   },
 };
 

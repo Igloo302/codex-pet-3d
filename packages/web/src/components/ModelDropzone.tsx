@@ -1,28 +1,22 @@
 import { useRef, useState } from "react";
+import type { Pet3DManifest } from "@codex-pet-3d/spec";
 
 export interface ModelDropzoneProps {
-  /** Receives the raw file bytes plus the original file name. */
+  /** Receives the raw GLB file bytes plus the original file name. */
   onModel: (data: Uint8Array, fileName: string) => void;
+  /** Optional handler when a companion pet-3d.json file is dropped alongside or separately. */
+  onManifestJson?: (manifest: Pet3DManifest, fileName: string) => void;
   onError?: (message: string) => void;
 }
 
 /**
- * Drag-and-drop (and click-to-browse) zone for local `.glb` models.
- *
- * The file is read with FileReader.readAsArrayBuffer and handed to the parent
- * as a portable Uint8Array — no Node Buffer dependency, so the same bytes can
- * be forwarded to the GLTF loader or a Web Worker.
+ * Drag-and-drop (and click-to-browse) zone for local `.glb` models (and optional `pet-3d.json`).
  */
-export function ModelDropzone({ onModel, onError }: ModelDropzoneProps) {
+export function ModelDropzone({ onModel, onManifestJson, onError }: ModelDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
 
-  const readFile = (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".glb")) {
-      onError?.("Only .glb (glTF 2.0 binary) files are supported.");
-      return;
-    }
-
+  const readGlbFile = (file: File) => {
     const reader = new FileReader();
     reader.onload = () => {
       const result = reader.result;
@@ -36,9 +30,44 @@ export function ModelDropzone({ onModel, onError }: ModelDropzoneProps) {
     reader.readAsArrayBuffer(file);
   };
 
+  const readJsonFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const text = typeof reader.result === "string" ? reader.result : "";
+        const parsed = JSON.parse(text) as Pet3DManifest;
+        if (!parsed || typeof parsed !== "object" || !parsed.animations || !parsed.camera) {
+          onError?.(`${file.name} does not look like a valid pet-3d.json manifest.`);
+          return;
+        }
+        onManifestJson?.(parsed, file.name);
+      } catch {
+        onError?.(`Failed to parse ${file.name} as JSON.`);
+      }
+    };
+    reader.onerror = () => onError?.(`Failed to read ${file.name}.`);
+    reader.readAsText(file);
+  };
+
   const handleFiles = (files: FileList | null) => {
-    const file = files?.[0];
-    if (file) readFile(file);
+    if (!files || files.length === 0) return;
+    let handledAny = false;
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const lower = file.name.toLowerCase();
+      if (lower.endsWith(".glb")) {
+        readGlbFile(file);
+        handledAny = true;
+      } else if (lower.endsWith(".json") && onManifestJson) {
+        readJsonFile(file);
+        handledAny = true;
+      }
+    }
+
+    if (!handledAny) {
+      onError?.("Only .glb (glTF 2.0 binary) files are supported.");
+    }
   };
 
   const openPicker = () => inputRef.current?.click();
@@ -78,18 +107,20 @@ export function ModelDropzone({ onModel, onError }: ModelDropzoneProps) {
       <span className="dropzone-icon" aria-hidden="true">
         ⇧
       </span>
-      <span className="dropzone-title">Drop a .glb model</span>
+      <span className="dropzone-title">
+        {onManifestJson ? "Drop .glb (and optional pet-3d.json)" : "Drop a .glb model"}
+      </span>
       <span className="dropzone-sub">
-        glTF 2.0 binary with the 9 standard animation clips
+        Auto-inspects skeleton, clips &amp; spec budgets right in your browser
       </span>
       <input
         ref={inputRef}
         className="file-input"
         type="file"
-        accept=".glb,model/gltf-binary"
+        multiple={Boolean(onManifestJson)}
+        accept={onManifestJson ? ".glb,model/gltf-binary,.json,application/json" : ".glb,model/gltf-binary"}
         onChange={(event) => {
           handleFiles(event.target.files);
-          // Allow picking the same file again after a reset.
           event.target.value = "";
         }}
       />

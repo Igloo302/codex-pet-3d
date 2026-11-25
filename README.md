@@ -5,10 +5,20 @@
 [![pnpm](https://img.shields.io/badge/pnpm-9.x-f69220.svg)](https://pnpm.io/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.4-blue.svg)](https://www.typescriptlang.org/)
 [![Vitest](https://img.shields.io/badge/tested%20with-Vitest-6e9f18.svg)](https://vitest.dev/)
+[![Web Studio](https://img.shields.io/badge/Web%20Studio-GitHub%20Pages-4cc9f0.svg)](https://igloo302.github.io/codex-pet-3d/)
 
 **Codex Pet 3D** extends the [Awesome Codex Pet](https://github.com/legeling/awesome-codex-pet) 2D format into interactive 3D — while guaranteeing **100% backwards compatibility** with existing 2D clients (TokenTracker, VS Code pets, Awesome Codex Pet).
 
-Author a rigged, animated 3D pet once → bake to a standards-compliant 2D spritesheet → run natively as a desktop companion with cursor-following LookAt.
+Author a rigged, animated 3D pet once → inspect & author in the **[Live Web Studio](https://igloo302.github.io/codex-pet-3d/)** → bake to a standards-compliant 2D spritesheet → run natively as a desktop companion with cursor-following LookAt and real-time Codex status sync.
+
+![Cyber Cat 3D Showcase](docs/images/cyber-cat-showcase.png)
+
+<details>
+<summary>View baked 2D Codex Pet v2 spritesheet (1536×2288 lossless WebP)</summary>
+
+![Cyber Cat Baked 2D Spritesheet](docs/images/cyber-cat-spritesheet.png)
+
+</details>
 
 ---
 
@@ -135,21 +145,41 @@ dist/
 └── pet.json           # Codex Pet v2 manifest
 ```
 
-### Run the Web Viewer
+### Run the Web Authoring Studio
 
 ```bash
-cd packages/web
-pnpm run dev
+pnpm run web
 # Opens http://localhost:5173
 ```
+
+Or use the hosted studio on GitHub Pages: **https://igloo302.github.io/codex-pet-3d/**
+
+The Web Studio supports:
+- Drag-and-drop `.glb` (and optional `pet-3d.json`) with live in-browser spec budget validation (vertices, triangles, texture size, file size, skeleton, clips)
+- Interactive `head_bone` selection, LookAt angle sliders, and 9-state animation clip mapping
+- Toggle between **LookAt Preview** and **Orbit Framing** (`OrbitControls`) synced directly to `camera.position` / `camera.target`
+- One-click **Copy / Download `pet-3d.json`**
 
 ### Run the Desktop Companion
 
 ```bash
-cd packages/desktop
-pnpm run dev
-# Launches frameless Electron window with 3D pet
+pnpm run desktop
+# Launches frameless Electron companion with system tray, multi-pet switcher, and Codex status sync
 ```
+
+**Desktop features:**
+- **Multi-Pet Switcher & Persistence**: Automatically discovers built-in assets, 3D pets installed in `~/.codex/pets/`, and any custom pet directories imported via the context/tray menu. Remembers selected pet, window position, window scale (`75%`–`150%`), LookAt, and Codex sync settings.
+- **Real-Time Codex / Agent Status Sync**: Automatically reacts to AI coding activity through three channels:
+  1. **Local HTTP Bridge** (`127.0.0.1:47321`, configurable via `CODEX_PET_3D_PORT`):
+     ```bash
+     # Notify pet that Codex/Claude is working, waiting, reviewing, succeeded, or failed
+     curl -sX POST http://127.0.0.1:47321/state \
+       -H 'Content-Type: application/json' \
+       -d '{"state":"running","source":"codex-hook"}'
+     ```
+     Supported states & aliases: `idle`, `running` (`working`/`coding`/`thinking`), `waiting` (`approval`/`input`), `review` (`reviewing`), `jumping` (`success`/`done`), `failed` (`error`), `waving` (`greet`).
+  2. **State JSON File**: Write `{"state":"waiting","source":"hook"}` to `~/.codex/pet-3d-state.json`.
+  3. **Passive Codex Activity Detection**: Watches `~/.codex` session/log updates as a zero-config fallback.
 
 ---
 
