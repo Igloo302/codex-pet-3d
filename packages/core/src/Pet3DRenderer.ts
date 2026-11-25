@@ -16,7 +16,15 @@ export class Pet3DRenderer {
   private renderCallback: (() => void) | null = null;
 
   constructor(options: Pet3DRendererOptions) {
-    const { canvas, width = 800, height = 600, fov = 45, backgroundColor = 0x000000, backgroundAlpha = 0 } = options;
+    const {
+      canvas,
+      width = 800,
+      height = 600,
+      fov = 45,
+      backgroundColor = 0x000000,
+      backgroundAlpha = 0,
+      enableXR = false,
+    } = options;
 
     this.width = width;
     this.height = height;
@@ -42,6 +50,9 @@ export class Pet3DRenderer {
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
+
+    // Enable the WebXR pipeline on the underlying renderer when requested.
+    this.renderer.xr.enabled = enableXR;
 
     // Setup 3-point lighting
     this.setupLighting();
@@ -98,6 +109,39 @@ export class Pet3DRenderer {
   }
 
   /**
+   * Enable or disable the WebXR pipeline on the underlying renderer.
+   */
+  setXREnabled(enabled: boolean): void {
+    this.renderer.xr.enabled = enabled;
+  }
+
+  /**
+   * Whether the WebXR pipeline is enabled on the underlying renderer.
+   */
+  isXREnabled(): boolean {
+    return this.renderer.xr.enabled;
+  }
+
+  /**
+   * Whether an immersive XR session is currently presenting.
+   */
+  isPresentingXR(): boolean {
+    return Boolean(this.renderer.xr?.isPresenting);
+  }
+
+  /**
+   * Delegate the animation loop to the WebGL renderer so XR frames are handled correctly.
+   * Pass `null` to stop the loop.
+   */
+  setAnimationLoop(callback: ((time: number, frame?: XRFrame) => void) | null): void {
+    if (this.animationId !== null) {
+      cancelAnimationFrame(this.animationId);
+      this.animationId = null;
+    }
+    this.renderer.setAnimationLoop(callback as XRFrameRequestCallback | null);
+  }
+
+  /**
    * Render a single frame
    */
   render(): void {
@@ -111,6 +155,7 @@ export class Pet3DRenderer {
    * Start the render loop
    */
   startRenderLoop(callback?: () => void): void {
+    this.stopRenderLoop();
     this.renderCallback = callback ?? null;
     const animate = () => {
       this.animationId = requestAnimationFrame(animate);
@@ -120,19 +165,24 @@ export class Pet3DRenderer {
   }
 
   /**
-   * Stop the render loop
+   * Stop the render loop, including any loop delegated to the WebGL renderer.
    */
   stopRenderLoop(): void {
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);
       this.animationId = null;
     }
+    this.renderer.setAnimationLoop(null);
   }
 
   /**
    * Resize the renderer and camera
    */
   resize(width: number, height: number): void {
+    // During an immersive XR session the XR manager owns the framebuffer; resizing the
+    // regular output would throw or corrupt presentation.
+    if (this.isPresentingXR()) return;
+
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(width, height);

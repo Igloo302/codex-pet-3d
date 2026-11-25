@@ -3,10 +3,13 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { Pet3DRenderer } from "./Pet3DRenderer.js";
 import { PetStateMachine, isOneShotState } from "./PetStateMachine.js";
 import { LookAtTracker, calculateAngles } from "./LookAtTracker.js";
+import { PetXRManager } from "./WebXRManager.js";
 import type {
   PetState,
   Pet3DControllerOptions,
   PetStateMachineOptions,
+  XRSessionOptions,
+  XRSessionState,
 } from "./types.js";
 
 /**
@@ -31,12 +34,18 @@ export class Pet3DController {
   private readonly onStateChange?: (from: PetState, to: PetState) => void;
   private readonly onAnimationFinished?: (state: PetState) => void;
   private readonly onLoadError?: (error: Error) => void;
+  private readonly onXRSessionChange?: (state: XRSessionState) => void;
+  private readonly onXRError?: (error: Error) => void;
+  private xrManager: PetXRManager | null = null;
   private isLoaded = false;
   private disposed = false;
   private readonly autoStartLoop: boolean;
   private readonly minFrameMs: number;
   private animationFrameId: number | null = null;
+  private loopRunning = false;
   private lastTime = 0;
+  private readonly xrReactions: PetState[] = ["waving", "jumping", "running", "review"];
+  private xrReactionIndex = 0;
   private readonly tmpEuler = new THREE.Euler(0, 0, 0, "YXZ");
   private readonly tmpQuat = new THREE.Quaternion();
   private readonly handleMixerFinished: (event: { action: THREE.AnimationAction }) => void;
@@ -48,6 +57,8 @@ export class Pet3DController {
       onStateChange,
       onAnimationFinished,
       onLoadError,
+      onXRSessionChange,
+      onXRError,
       autoStartLoop = true,
       maxFps,
       ...rendererOptions
@@ -100,6 +111,25 @@ export class Pet3DController {
     this.onStateChange = onStateChange;
     this.onAnimationFinished = onAnimationFinished;
     this.onLoadError = onLoadError;
+    this.onXRSessionChange = onXRSessionChange;
+    this.onXRError = onXRError;
+
+    // Integrate the WebXR manager only when the renderer exposes the underlying Three.js
+    // renderer (minimal test doubles omit it, so XR stays disabled there).
+    const rendererForXR = this.renderer as Partial<Pet3DRenderer>;
+    if (typeof rendererForXR.getRenderer === "function") {
+      this.xrManager = new PetXRManager({
+        renderer: this.renderer,
+        petRoot: this.model,
+        getHeadWorldPosition: () => this.getHeadWorldPosition(),
+        onLookAtTarget: (x, y) => this.setLookAtTarget(x, y),
+        onTriggerReaction: () => this.triggerXRReaction(),
+        onStateChange: (state) => this.onXRSessionChange?.(state),
+        maxYawRad: this.maxYawRad,
+        maxPitchRad: this.maxPitchRad,
+        baseScale: manifest.scale,
+      });
+    }
 
     // Create animation mixer and listen for one-shot completion
     this.mixer = new THREE.AnimationMixer(this.model);
@@ -228,31 +258,51 @@ export class Pet3DController {
    * Start the animation loop
    */
   startAnimationLoop(): void {
-    if (this.animationFrameId !== null || this.disposed) return;
+    if (this.loopRunning || this.disposed) return;
+    this.loopRunning = true;
     this.lastTime = performance.now();
-    const animate = (time: number) => {
-      if (this.disposed) return;
-      this.animationFrameId = requestAnimationFrame(animate);
-      const elapsedMs = time - this.lastTime;
-      if (this.minFrameMs > 0 && elapsedMs < this.minFrameMs) {
+
+    const animate = (time: number, xrFrame?: XRFrame) => {
+      if (this.disposed) {
+        this.loopRunning = false;
         return;
       }
-      const dt = elapsedMs / 1000; // seconds
+      const presenting = this.renderer.isPresentingXR?.() ?? false;
+      const elapsedMs = time - this.lastTime;
+      if (!presenting && this.minFrameMs > 0 && elapsedMs < this.minFrameMs) {
+        return; // Throttle; keep lastTime so elapsed time accumulates.
+      }
+      const dt = Math.min(Math.max(elapsedMs / 1000, 0), 0.1);
       this.lastTime = time;
 
+      // Feed the 3D headset LookAt before updating so it lands on the same frame.
+      this.xrManager?.onXRFrame(xrFrame);
       this.update(dt);
       this.renderer.render();
     };
-    this.animationFrameId = requestAnimationFrame(animate);
+
+    if (typeof (this.renderer as Partial<Pet3DRenderer>).setAnimationLoop === "function") {
+      this.renderer.setAnimationLoop(animate);
+    } else {
+      const rafLoop = (time: number) => {
+        this.animationFrameId = requestAnimationFrame(rafLoop);
+        animate(time);
+      };
+      this.animationFrameId = requestAnimationFrame(rafLoop);
+    }
   }
 
   /**
    * Stop the animation loop
    */
   stopAnimationLoop(): void {
+    this.loopRunning = false;
     if (this.animationFrameId !== null) {
       cancelAnimationFrame(this.animationFrameId);
       this.animationFrameId = null;
+    }
+    if (typeof (this.renderer as Partial<Pet3DRenderer>).setAnimationLoop === "function") {
+      this.renderer.setAnimationLoop(null);
     }
   }
 
@@ -319,6 +369,85 @@ export class Pet3DController {
   }
 
   /**
+   * Enter an immersive WebXR session (immersive-ar or immersive-vr).
+   */
+  async enterXR(options?: XRSessionOptions): Promise<XRSessionState> {
+    if (!this.xrManager) {
+      throw new Error("WebXR is not available with this renderer.");
+    }
+    try {
+      return await this.xrManager.enterXR(options);
+    } catch (error) {
+      const err = error instanceof Error ? error : new Error(String(error));
+      this.onXRError?.(err);
+      throw err;
+    }
+  }
+
+  /**
+   * Exit the active WebXR session, if any.
+   */
+  exitXR(): Promise<void> {
+    return this.xrManager ? this.xrManager.exitXR() : Promise.resolve();
+  }
+
+  /**
+   * Current WebXR session state.
+   */
+  getXRState(): XRSessionState {
+    return this.xrManager?.getState() ?? {
+      active: false,
+      mode: null,
+      placementActive: false,
+      surfaceDetected: false,
+      xrScale: 1,
+    };
+  }
+
+  /**
+   * Toggle AR surface placement mode while in an immersive-ar session.
+   */
+  setXRPlacementMode(enabled: boolean): void {
+    this.xrManager?.setPlacementMode(enabled);
+  }
+
+  /**
+   * Set the XR scale multiplier (clamped to [0.15, 2.0]).
+   */
+  setXRScale(scale: number): void {
+    this.xrManager?.setXRScale(scale);
+  }
+
+  /**
+   * Recenter the pet in front of the current XR camera.
+   */
+  recenterXRPet(): void {
+    this.xrManager?.recenterPet();
+  }
+
+  /**
+   * World position of the head bone (falls back to the model root before load).
+   */
+  private getHeadWorldPosition(): THREE.Vector3 {
+    const position = new THREE.Vector3();
+    if (this.headBone) {
+      this.headBone.getWorldPosition(position);
+    } else {
+      this.model.getWorldPosition(position);
+    }
+    return position;
+  }
+
+  /**
+   * Cycle a playful reaction state on XR tap/trigger.
+   */
+  private triggerXRReaction(): void {
+    const state = this.xrReactions[this.xrReactionIndex % this.xrReactions.length];
+    this.xrReactionIndex += 1;
+    this.playState(state);
+  }
+
+  /**
    * Resize the renderer
    */
   resize(width: number, height: number): void {
@@ -359,6 +488,8 @@ export class Pet3DController {
     this.disposed = true;
 
     this.stopAnimationLoop();
+    this.xrManager?.dispose();
+    this.xrManager = null;
     this.mixer.removeEventListener("finished", this.handleMixerFinished);
 
     // Stop all actions

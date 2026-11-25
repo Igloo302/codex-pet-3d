@@ -1,3 +1,5 @@
+import * as THREE from "three";
+
 /**
  * Pure function to calculate yaw and pitch angles from target coordinates.
  * Clamps within [-maxYawRad, maxYawRad] and [-maxPitchRad, maxPitchRad].
@@ -23,6 +25,61 @@ export function calculateAngles(
   if (Object.is(pitch, -0)) pitch = 0;
 
   return { yaw, pitch };
+}
+
+/**
+ * Pure helper that converts a world-space gaze target into normalized LookAt coordinates
+ * relative to the pet's orientation. Used by WebXR so the pet's head can track the headset
+ * camera in 3D space.
+ *
+ * - `headWorldPos` is the pet head bone world position.
+ * - `petWorldQuat` is the pet root world quaternion (assumed unit length).
+ * - `targetWorldPos` is the world position the pet should look at (e.g. the XR camera).
+ *
+ * Returns normalized `{ x, y }` in [-1, 1] matching `calculateAngles` semantics:
+ * `x > 0` looks right, `y < 0` looks up.
+ */
+export function calculateWorldLookAtTarget(
+  headWorldPos: { x: number; y: number; z: number },
+  petWorldQuat: { x: number; y: number; z: number; w: number },
+  targetWorldPos: { x: number; y: number; z: number },
+  maxYawRad: number,
+  maxPitchRad: number
+): { x: number; y: number } {
+  const direction = new THREE.Vector3(
+    targetWorldPos.x - headWorldPos.x,
+    targetWorldPos.y - headWorldPos.y,
+    targetWorldPos.z - headWorldPos.z
+  );
+
+  if (direction.lengthSq() < 1e-8) {
+    return { x: 0, y: 0 };
+  }
+
+  // Rotate the world direction into the pet's local space using the inverse of the
+  // world quaternion (the conjugate for a unit quaternion).
+  const inverseQuat = new THREE.Quaternion(
+    petWorldQuat.x,
+    petWorldQuat.y,
+    petWorldQuat.z,
+    petWorldQuat.w
+  );
+  inverseQuat.invert();
+  direction.applyQuaternion(inverseQuat);
+
+  // Pet forward is +Z, up is +Y, viewer's right is +X.
+  const rawYaw = Math.atan2(direction.x, direction.z);
+  const rawPitch = Math.atan2(direction.y, Math.hypot(direction.x, direction.z));
+
+  const clamp = (value: number) => Math.max(-1, Math.min(1, value));
+  let x = maxYawRad > 0 ? clamp(rawYaw / maxYawRad) : 0;
+  let y = maxPitchRad > 0 ? clamp(-rawPitch / maxPitchRad) : 0;
+
+  // Normalize -0 to +0.
+  if (Object.is(x, -0)) x = 0;
+  if (Object.is(y, -0)) y = 0;
+
+  return { x, y };
 }
 
 /**

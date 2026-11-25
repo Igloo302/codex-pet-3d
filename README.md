@@ -160,6 +160,15 @@ The Web Studio supports:
 - Toggle between **LookAt Preview** and **Orbit Framing** (`OrbitControls`) synced directly to `camera.position` / `camera.target`
 - One-click **Copy / Download `pet-3d.json`**
 
+#### Immersive WebXR (AR / VR)
+
+The studio exposes an optional WebXR layer built on the same `Pet3DController`:
+
+- **`immersive-ar`** — hit-test surface placement with a cyan reticle, transparent passthrough, and a DOM-overlay HUD for *Move Pet* (tap to place), scale ±, recenter and quick animations. The pet's head follows your headset via 3D gaze LookAt.
+- **`immersive-vr`** — a grounded cyber-studio stage (ring + grid) beneath the pet, controller ray lines, and trigger/squeeze interaction that cycles playful reactions. 3D gaze LookAt keeps the pet's head facing you.
+- **HTTPS required** — WebXR only works in a secure context, so serve the studio over HTTPS or `http://localhost`. When no immersive session is possible the viewport falls back to a disabled `WebXR Unavailable` / `WebXR Needs HTTPS` button with an explanatory tooltip.
+- **Testing** — use a WebXR-capable headset browser (for example the Quest Browser) or install the [Immersive Web Emulator](https://chromewebstore.google.com/detail/immersive-web-emulator/cgffilbpcibhmcfbgggfhfolhkfbhmik) extension in Chrome or Edge.
+
 ### Run the Desktop Companion
 
 ```bash

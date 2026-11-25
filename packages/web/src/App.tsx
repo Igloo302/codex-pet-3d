@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { toControllerManifest, type PetState } from "@codex-pet-3d/core";
+import {
+  toControllerManifest,
+  type PetState,
+  type XRSessionState,
+} from "@codex-pet-3d/core";
 import { STANDARD_ANIMATION_STATES, type Pet3DManifest } from "@codex-pet-3d/spec";
 import { inspectGlb, type GlbInspectionResult } from "@codex-pet-3d/spec/glb";
 import { ActionControls, ACTION_LABELS } from "./components/ActionControls";
@@ -48,6 +52,7 @@ export function App() {
   const [inspection, setInspection] = useState<GlbInspectionResult | null>(null);
   const [status, setStatus] = useState("Official Cyber Cat loaded and inspected.");
   const [isError, setIsError] = useState(false);
+  const [xrState, setXrState] = useState<XRSessionState | null>(null);
   const objectUrlRef = useRef<string | null>(null);
 
   const inspectSample = useCallback(async () => {
@@ -173,6 +178,12 @@ export function App() {
           <span className="chip">
             <span className="live-dot" /> State: <strong>{ACTION_LABELS[currentState]}</strong>
           </span>
+          {xrState?.active && (
+            <span className="chip chip-xr">
+              <span className="live-dot" /> WebXR ·{" "}
+              <strong>{xrState.mode === "immersive-ar" ? "AR" : "VR"}</strong>
+            </span>
+          )}
           {diagnostics && (
             <span className={`chip ${diagnostics.ready ? "chip-pass" : "chip-fail"}`}>
               {diagnostics.ready ? "Spec Ready" : `${diagnostics.errors.length} Spec Issue(s)`}
@@ -191,6 +202,7 @@ export function App() {
           onCameraModeChange={setCameraMode}
           onCameraCommit={handleCameraCommit}
           onStateChange={setCurrentState}
+          onXRStateChange={setXrState}
           onLoadError={(err) => {
             setStatus(`Failed to load model: ${err.message}`);
             setIsError(true);

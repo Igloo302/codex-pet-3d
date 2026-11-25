@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import { calculateAngles, LookAtTracker } from "../src/LookAtTracker";
+import * as THREE from "three";
+import {
+  calculateAngles,
+  calculateWorldLookAtTarget,
+  LookAtTracker,
+} from "../src/LookAtTracker";
 
 describe("calculateAngles", () => {
   it("should return zero angles for center target", () => {
@@ -60,6 +65,97 @@ describe("calculateAngles", () => {
     const result = calculateAngles(1, -1, Math.PI / 2, Math.PI / 4);
     expect(result.yaw).toBeGreaterThan(0);
     expect(result.pitch).toBeGreaterThan(0);
+  });
+});
+
+describe("calculateWorldLookAtTarget", () => {
+  const maxYawRad = Math.PI / 2;
+  const maxPitchRad = Math.PI / 4;
+  const head = { x: 0, y: 0, z: 0 };
+  const identity = { x: 0, y: 0, z: 0, w: 1 };
+
+  it("returns center for a target straight ahead along pet +Z", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 0, y: 0, z: 1 }, maxYawRad, maxPitchRad);
+    expect(result.x).toBe(0);
+    expect(result.y).toBe(0);
+  });
+
+  it("returns positive x when the target is to the pet's right", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 1, y: 0, z: 1 }, maxYawRad, maxPitchRad);
+    expect(result.x).toBeCloseTo(0.5, 5);
+    expect(result.y).toBe(0);
+  });
+
+  it("returns negative x when the target is to the pet's left", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: -1, y: 0, z: 1 }, maxYawRad, maxPitchRad);
+    expect(result.x).toBeCloseTo(-0.5, 5);
+    expect(result.y).toBe(0);
+  });
+
+  it("returns negative y for an upward target (upward head tilt)", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 0, y: 1, z: 1 }, maxYawRad, maxPitchRad);
+    expect(result.x).toBe(0);
+    expect(result.y).toBeCloseTo(-1, 5);
+  });
+
+  it("returns positive y for a downward target", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 0, y: -1, z: 1 }, maxYawRad, maxPitchRad);
+    expect(result.x).toBe(0);
+    expect(result.y).toBeCloseTo(1, 5);
+  });
+
+  it("rotates the gaze direction into pet-local space", () => {
+    // Pet turned 90 degrees to its left: its local +Z now points along world +X.
+    const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), Math.PI / 2);
+
+    const ahead = calculateWorldLookAtTarget(
+      head,
+      { x: turn.x, y: turn.y, z: turn.z, w: turn.w },
+      { x: 1, y: 0, z: 0 },
+      maxYawRad,
+      maxPitchRad
+    );
+    expect(ahead.x).toBeCloseTo(0, 5);
+    expect(ahead.y).toBe(0);
+
+    const side = calculateWorldLookAtTarget(
+      head,
+      { x: turn.x, y: turn.y, z: turn.z, w: turn.w },
+      { x: 0, y: 0, z: 1 },
+      maxYawRad,
+      maxPitchRad
+    );
+    expect(side.x).toBeCloseTo(-1, 5);
+  });
+
+  it("returns zero for a target coincident with the head", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 0, y: 0, z: 0 }, maxYawRad, maxPitchRad);
+    expect(result).toEqual({ x: 0, y: 0 });
+  });
+
+  it("clamps yaw and pitch to the unit range", () => {
+    const right = calculateWorldLookAtTarget(head, identity, { x: 10, y: 0, z: 0 }, maxYawRad, maxPitchRad);
+    expect(right.x).toBe(1);
+
+    const left = calculateWorldLookAtTarget(head, identity, { x: -10, y: 0, z: 0 }, maxYawRad, maxPitchRad);
+    expect(left.x).toBe(-1);
+
+    const up = calculateWorldLookAtTarget(head, identity, { x: 0, y: 10, z: 0 }, maxYawRad, maxPitchRad);
+    expect(up.y).toBe(-1);
+
+    const down = calculateWorldLookAtTarget(head, identity, { x: 0, y: -10, z: 0 }, maxYawRad, maxPitchRad);
+    expect(down.y).toBe(1);
+  });
+
+  it("returns neutral values for a non-positive max range", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 1, y: 1, z: 1 }, 0, 0);
+    expect(result).toEqual({ x: 0, y: 0 });
+  });
+
+  it("normalizes negative zero to positive zero", () => {
+    const result = calculateWorldLookAtTarget(head, identity, { x: 0, y: 0, z: 1 }, maxYawRad, maxPitchRad);
+    expect(Object.is(result.x, -0)).toBe(false);
+    expect(Object.is(result.y, -0)).toBe(false);
   });
 });
 

@@ -39,6 +39,49 @@ export interface Pet3DRendererOptions {
   fov?: number;
   backgroundColor?: number;
   backgroundAlpha?: number;
+  enableXR?: boolean;
+}
+
+/**
+ * WebXR immersive session mode.
+ */
+export type XRMode = "immersive-ar" | "immersive-vr";
+
+/**
+ * Capability probe result for WebXR support in the current environment.
+ */
+export interface WebXRSupportStatus {
+  /** True when a WebXR system is present and at least one immersive mode is supported. */
+  available: boolean;
+  /** True when the page is running in a secure context (HTTPS or localhost). */
+  secureContext: boolean;
+  arSupported: boolean;
+  vrSupported: boolean;
+  preferredMode: XRMode | null;
+  /** Human-readable explanation when support is unavailable or degraded. */
+  reason?: string;
+}
+
+/**
+ * Options for entering an immersive WebXR session.
+ */
+export interface XRSessionOptions {
+  mode?: XRMode;
+  domOverlayRoot?: HTMLElement | null;
+  xrScale?: number;
+  placementDistance?: number;
+  referenceSpaceType?: XRReferenceSpaceType;
+}
+
+/**
+ * Live state of an active (or idle) WebXR session.
+ */
+export interface XRSessionState {
+  active: boolean;
+  mode: XRMode | null;
+  placementActive: boolean;
+  surfaceDetected: boolean;
+  xrScale: number;
 }
 
 /**
@@ -64,6 +107,8 @@ export interface Pet3DControllerOptions extends Pet3DRendererOptions {
   onStateChange?: (from: PetState, to: PetState) => void;
   onAnimationFinished?: (state: PetState) => void;
   onLoadError?: (error: Error) => void;
+  onXRSessionChange?: (state: XRSessionState) => void;
+  onXRError?: (error: Error) => void;
   autoStartLoop?: boolean;
   maxFps?: number;
 }
